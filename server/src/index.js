@@ -41,9 +41,14 @@ app.use('/api/v1', apiRoutes);
 app.use('/api/v1/whatsapp', whatsappRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 
-// Health Check
-app.get('/health', (req, res) => {
-  res.json({ status: 'healthy', timestamp: new Date(), service: 'DARJI ERP Backend API' });
+// Health Check Endpoints for UptimeRobot 24/7 Keep-Alive
+app.get(['/', '/health', '/api/health', '/api/v1/health'], (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    uptime: process.uptime(),
+    timestamp: new Date(),
+    service: 'DARJI ERP Backend API',
+  });
 });
 
 // Start Server
