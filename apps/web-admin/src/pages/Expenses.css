@@ -1,0 +1,212 @@
+/* ── Expenses Page Styles ── */
+.expenses {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.expenses__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4);
+}
+
+.expenses__card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.expenses__card--total {
+  background: var(--bg-active);
+  border-color: var(--color-gold-500);
+}
+
+.expenses__card-label {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.expenses__card-val {
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.expenses__toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.expenses__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 220px;
+}
+
+.expenses__search-icon {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.expenses__search-input {
+  width: 100%;
+  padding: var(--space-2-5) var(--space-4) var(--space-2-5) var(--space-10);
+  font-size: var(--text-sm);
+}
+
+.expenses__filters {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.expenses__cat-btn {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  transition: all var(--transition-fast);
+}
+
+.expenses__cat-btn:hover {
+  border-color: var(--color-gold-500);
+}
+
+.expenses__cat-btn--active {
+  background: var(--color-gold-500);
+  color: white;
+  border-color: var(--color-gold-500);
+}
+
+.expenses__add-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2-5) var(--space-5);
+  background: linear-gradient(135deg, var(--color-gold-500), var(--color-gold-600));
+  color: white;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-gold);
+  margin-left: auto;
+}
+
+/* Table */
+.expenses__table-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+}
+
+.expenses__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.expenses__table th {
+  padding: var(--space-3) var(--space-5);
+  text-align: left;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-default);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.expenses__table td {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.expenses__desc {
+  font-weight: 500;
+}
+
+.expenses__cat-badge {
+  padding: 2px 8px;
+  background: var(--bg-hover);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.expenses__mode {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.expenses__recurring {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  color: var(--color-gold-500);
+}
+
+.expenses__amount {
+  font-weight: 700;
+  color: var(--color-danger);
+}
+
+.expenses__del-btn {
+  color: var(--text-tertiary);
+  padding: 4px;
+  border-radius: var(--radius-xs);
+  transition: color var(--transition-fast);
+}
+
+.expenses__del-btn:hover {
+  color: var(--color-danger);
+  background: var(--color-danger-light);
+}
+
+.expenses__empty {
+  text-align: center;
+  padding: var(--space-12) !important;
+  color: var(--text-tertiary);
+}
+
+@media (max-width: 768px) {
+  .expenses__cards {
+    grid-template-columns: 1fr 1fr;
+  }
+  .expenses__toolbar {
+    flex-direction: column;
+  }
+  .expenses__search {
+    width: 100%;
+  }
+  .expenses__add-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .expenses__cards {
+    grid-template-columns: 1fr;
+  }
+}

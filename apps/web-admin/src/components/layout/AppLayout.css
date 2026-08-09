@@ -1,0 +1,37 @@
+/* ── App Layout ── */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-layout__main {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: margin-left var(--transition-slow);
+}
+
+.app-layout__main--collapsed {
+  margin-left: var(--sidebar-collapsed-width);
+}
+
+.app-layout__content {
+  flex: 1;
+  padding: var(--space-6);
+  animation: fadeIn 0.3s ease-out;
+}
+
+@media (max-width: 768px) {
+  .app-layout__main {
+    margin-left: 0;
+  }
+  .app-layout__main--collapsed {
+    margin-left: 0;
+  }
+  .app-layout__content {
+    padding: var(--space-3);
+    padding-bottom: 76px;
+  }
+}

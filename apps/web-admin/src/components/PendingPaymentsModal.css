@@ -1,0 +1,313 @@
+/* Pending Payments Modal */
+.pending-modal {
+  background: var(--bg-surface);
+  border-radius: var(--radius-xl);
+  width: 90%;
+  max-width: 820px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border-default);
+  overflow: hidden;
+}
+
+.pending-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-5) var(--space-6);
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-primary);
+}
+
+.pending-modal__title-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.pending-modal__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-full);
+  background: var(--color-warning-light);
+  color: var(--color-warning);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pending-modal__title-group h2 {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.pending-modal__title-group p {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+/* Banner */
+.pending-modal__banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  background: linear-gradient(135deg, rgba(199, 119, 0, 0.08), rgba(201, 162, 75, 0.12));
+  border-bottom: 1px solid var(--border-default);
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.pending-modal__banner-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-warning);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pending-modal__banner-val {
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  color: var(--color-warning);
+}
+
+.pending-modal__search-box {
+  position: relative;
+  width: 280px;
+}
+
+.pending-modal__search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+}
+
+.pending-modal__search-input {
+  width: 100%;
+  padding: 8px 12px 8px 32px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  font-size: var(--text-xs);
+}
+
+.pending-modal__search-clear {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+
+/* Body */
+.pending-modal__body {
+  padding: var(--space-5) var(--space-6);
+  overflow-y: auto;
+  max-height: 55vh;
+  flex: 1;
+}
+
+.pending-modal__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-10) 0;
+  color: var(--text-tertiary);
+  gap: var(--space-2);
+}
+
+.pending-modal__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Card */
+.pending-card {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  background: var(--bg-surface);
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.pending-card:hover {
+  border-color: var(--color-gold-400);
+  box-shadow: var(--shadow-sm);
+}
+
+.pending-card__main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.pending-card__user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 220px;
+}
+
+.pending-card__avatar {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: var(--text-base);
+  color: white;
+  background: linear-gradient(135deg, var(--color-navy-600), var(--color-navy-500));
+  overflow: hidden;
+}
+
+.pending-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-full);
+}
+
+.pending-card__avatar[data-gender="female"] {
+  background: linear-gradient(135deg, #8E24AA, #AB47BC);
+}
+
+.pending-card__name {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.pending-card__phone {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 2px;
+}
+
+.pending-card__amount-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.pending-card__amount-label {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.pending-card__amount {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  color: var(--color-danger);
+}
+
+.pending-card__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pending-card__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all var(--transition-fast);
+}
+
+.pending-card__btn--wa {
+  background: #25D366;
+  color: white;
+}
+
+.pending-card__btn--wa:hover {
+  background: #1DA851;
+}
+
+.pending-card__btn--profile {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+}
+
+.pending-card__btn--profile:hover {
+  background: var(--color-navy-50);
+  border-color: var(--color-navy-300);
+}
+
+/* Orders breakdown inside card */
+.pending-card__orders {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--border-default);
+}
+
+.pending-card__orders-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+}
+
+.pending-card__orders-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1-5);
+}
+
+.pending-card__order-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-default);
+  padding: 4px 10px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+}
+
+.pending-card__order-num {
+  font-weight: 700;
+  color: var(--color-navy-600);
+}
+
+.pending-card__order-items {
+  color: var(--text-secondary);
+}
+
+.pending-card__order-bal {
+  font-weight: 700;
+  color: var(--color-danger);
+}
+
+.pending-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--border-default);
+  background: var(--bg-primary);
+}

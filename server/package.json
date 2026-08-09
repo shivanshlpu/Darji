@@ -1,0 +1,31 @@
+{
+  "name": "darji-server",
+  "version": "1.0.0",
+  "description": "DARJI ERP Backend API Service",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "clear-data": "node src/scripts/clearEntryData.js",
+    "seed": "node src/scripts/seedDatabase.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^7.0.0-rc14",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mime-types": "^3.0.2",
+    "mongoose": "^8.9.5",
+    "pdfkit": "^0.19.1",
+    "pino": "^10.3.1",
+    "puppeteer": "^25.5.0",
+    "qrcode": "^1.5.4",
+    "zod": "^3.24.1"
+  }
+}
