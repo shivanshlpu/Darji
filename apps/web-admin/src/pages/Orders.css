@@ -1233,51 +1233,50 @@
 }
 
 
- / *   C u s t o m   M e a s u r e m e n t   A d d e r   * / 
- . o r d e r s _ _ c u s t o m - m e a s u r e m e n t - a d d e r   { 
-     d i s p l a y :   f l e x ; 
-     g a p :   6 p x ; 
-     a l i g n - i t e m s :   c e n t e r ; 
-     p a d d i n g :   6 p x   1 0 p x ; 
-     b o r d e r - r a d i u s :   6 p x ; 
-     b o r d e r :   1 p x   d a s h e d   # c b d 5 e 1 ; 
-     f l e x - w r a p :   w r a p ; 
- } 
- 
- . o r d e r s _ _ c u s t o m - m e a s u r e m e n t - a d d e r   s p a n   { 
-     f o n t - s i z e :   1 1 p x ; 
-     f o n t - w e i g h t :   7 0 0 ; 
-     c o l o r :   v a r ( - - c o l o r - n a v y - 7 0 0 ) ; 
-     w h i t e - s p a c e :   n o w r a p ; 
- } 
- 
- . o r d e r s _ _ c u s t o m - m e a s u r e m e n t - a d d e r   i n p u t   { 
-     p a d d i n g :   4 p x   8 p x ; 
-     f o n t - s i z e :   1 2 p x ; 
-     b o r d e r - r a d i u s :   4 p x ; 
-     b o r d e r :   1 p x   s o l i d   # c b d 5 e 1 ; 
- } 
- 
- . o r d e r s _ _ c u s t o m - m e a s u r e m e n t - a d d e r   . m e a s - p a r t - i n p u t   { 
-     f l e x :   1   1   1 2 0 p x ; 
-     m i n - w i d t h :   1 2 0 p x ; 
- } 
- 
- . o r d e r s _ _ c u s t o m - m e a s u r e m e n t - a d d e r   . m e a s - s i z e - i n p u t   { 
-     f l e x :   0   0   9 0 p x ; 
-     w i d t h :   9 0 p x ; 
- } 
- 
- . o r d e r s _ _ c u s t o m - m e a s u r e m e n t - a d d e r   b u t t o n   { 
-     b a c k g r o u n d :   v a r ( - - c o l o r - g o l d - 5 0 0 ) ; 
-     c o l o r :   # f f f ; 
-     b o r d e r :   n o n e ; 
-     b o r d e r - r a d i u s :   4 p x ; 
-     p a d d i n g :   4 p x   1 0 p x ; 
-     f o n t - s i z e :   1 1 p x ; 
-     f o n t - w e i g h t :   6 0 0 ; 
-     c u r s o r :   p o i n t e r ; 
-     w h i t e - s p a c e :   n o w r a p ; 
- } 
-  
- 
+/* Custom Measurement Adder */
+.orders__custom-measurement-adder {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px dashed #cbd5e1;
+  flex-wrap: wrap;
+}
+
+.orders__custom-measurement-adder span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-navy-700);
+  white-space: nowrap;
+}
+
+.orders__custom-measurement-adder input {
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+}
+
+.orders__custom-measurement-adder .meas-part-input {
+  flex: 1 1 120px;
+  min-width: 120px;
+}
+
+.orders__custom-measurement-adder .meas-size-input {
+  flex: 0 0 90px;
+  width: 90px;
+}
+
+.orders__custom-measurement-adder button {
+  background: var(--color-gold-500);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
