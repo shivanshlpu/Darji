@@ -491,11 +491,14 @@
 
   .billing__actions-right {
     flex-wrap: wrap;
-    gap: var(--space-2);
+    gap: 8px;
+    width: 100%;
+    flex-direction: column;
   }
 
   .billing__action-btn {
-    flex: 1 1 auto;
+    flex: 1 1 100% !important;
+    width: 100%;
     justify-content: center;
     min-width: 0;
     max-width: 100%;
@@ -503,27 +506,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    padding: 10px 12px !important;
+    font-size: 13px !important;
   }
 
-  .billing__actions {
-    flex-wrap: wrap !important;
-    gap: 8px !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  .billing__actions button {
-    flex: 1 1 calc(50% - 6px) !important;
-    min-width: 120px !important;
-    max-width: 100% !important;
-    padding: 8px 10px !important;
-    font-size: 12px !important;
-    justify-content: center !important;
-    box-sizing: border-box !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
+  .billing__action-btn--whatsapp {
+    flex: 1 1 100% !important;
   }
 
   .billing__item-rate-row {
