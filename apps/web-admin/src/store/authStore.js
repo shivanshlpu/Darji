@@ -32,16 +32,22 @@ const useAuthStore = create((set) => ({
     }
 
     // Check custom updated password in local storage
+    const cleanDigits = String(phone || '').replace(/\D/g, '').slice(-10);
     const customPass = localStorage.getItem('darji_custom_password');
     const isCustomMatch = customPass && password === customPass;
 
-    // Local fallback if offline
-    if (isCustomMatch || (phone === '9999999999' && password === 'darji123') || (phone === '8888888888' && password === 'staff123')) {
+    // Local fallback if offline or backend cold starting
+    if (
+      isCustomMatch ||
+      (cleanDigits === '9009149694' && password === '12345678') ||
+      (cleanDigits === '9999999999' && password === 'darji123') ||
+      (cleanDigits === '8888888888' && password === 'staff123')
+    ) {
       const user = {
         _id: 'user_001',
-        name: phone === '8888888888' ? 'Sunil Kumar' : 'Rajesh Darji',
-        phone,
-        email: 'admin@darjitailors.com',
+        name: cleanDigits === '8888888888' ? 'Sunil Kumar' : 'Shivansh Darji',
+        phone: cleanDigits || '9009149694',
+        email: 'darjithetailoringshop@gmail.com',
         role: 'owner',
         permissions: ['all'],
         shopId: 'shop_001',

@@ -15,13 +15,26 @@ const generateToken = (id) => {
 
 export const login = async (req, res) => {
   try {
-    const { phone, password } = req.body;
-    let user = await User.findOne({ phone }).populate('shopId');
+    let { phone, password } = req.body;
+    const digits = String(phone || '').replace(/\D/g, '').slice(-10);
+
+    let user = await User.findOne({
+      $or: [
+        { phone: digits },
+        { phone: phone ? phone.trim() : '' },
+        { phone: `+91${digits}` },
+      ],
+    }).populate('shopId');
 
     if (!user) {
       // Auto seed on first login if database is fresh
       await seedDefaultData();
-      user = await User.findOne({ phone }).populate('shopId');
+      user = await User.findOne({
+        $or: [
+          { phone: digits },
+          { phone: phone ? phone.trim() : '' },
+        ],
+      }).populate('shopId');
     }
 
     if (user && (await bcrypt.compare(password, user.passwordHash))) {
