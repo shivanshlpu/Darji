@@ -615,6 +615,11 @@
   display: flex;
   gap: var(--space-2);
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.orders__item-row input[type="text"] {
+  flex: 1 1 auto;
 }
 
 /* Date */
@@ -1116,6 +1121,10 @@
 @media (max-width: 768px) {
   .orders__grid {
     grid-template-columns: 1fr !important;
+  }
+  .orders__item-row input[type="text"] {
+    flex: 1 1 100% !important;
+    min-width: 100% !important;
   }
   .orders__toolbar {
     flex-direction: column !important;
