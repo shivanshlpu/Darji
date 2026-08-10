@@ -141,6 +141,18 @@ export default function Orders() {
     const balanceDue = Math.max(0, totalAmount - advancePaid);
     const paymentStatus = balanceDue <= 0 ? 'paid' : advancePaid > 0 ? 'partial' : 'unpaid';
 
+    // 1. Save all edited measurements directly to customer profile & MongoDB Atlas
+    editItems.forEach(item => {
+      if (item.measurements && Object.keys(item.measurements).length > 0) {
+        addMeasurement(
+          editingOrder.customerId,
+          editingOrder.customerName,
+          item.category || 'topWear',
+          item.measurements
+        );
+      }
+    });
+
     const payload = {
       items: editItems,
       subtotal,
@@ -155,7 +167,11 @@ export default function Orders() {
     };
 
     updateOrder(editingOrder._id, payload);
-    apiClient.updateOrder(editingOrder._id, payload).catch(() => {});
+    apiClient.updateOrder(editingOrder._id, payload)
+      .then(() => fetchOrdersFromDB())
+      .catch((err) => console.warn('[Update Order Warning]:', err.message));
+
+    showToast(`✅ Order #${editingOrder.tokenNumber || editingOrder.orderNumber} & measurements updated!`);
     setShowEditModal(false);
     setEditingOrder(null);
   };

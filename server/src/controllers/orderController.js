@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Order from '../models/Order.js';
 import Customer from '../models/Customer.js';
+import Measurement from '../models/Measurement.js';
 import { sendWhatsappMessage } from '../services/whatsapp.service.js';
 
 const ALLOWED_TRANSITIONS = {
@@ -143,6 +144,37 @@ export const updateOrder = async (req, res) => {
     }
 
     await order.save();
+
+    // Auto-create/update measurement entries in Measurement collection for the customer
+    if (Array.isArray(items) && order.customerId) {
+      for (const item of items) {
+        if (item.measurements && typeof item.measurements === 'object' && Object.keys(item.measurements).length > 0) {
+          try {
+            const cat = item.category || 'topWear';
+            const existingMeas = await Measurement.find({
+              customerId: order.customerId,
+              category: cat,
+              isDeleted: false,
+            }).sort({ version: -1 });
+
+            const latestVer = existingMeas.length > 0 ? (existingMeas[0].version || 0) : 0;
+            const prevVerId = existingMeas.length > 0 ? existingMeas[0]._id : null;
+
+            await Measurement.create({
+              shopId: order.shopId || '6a738b5176dab967966f9041',
+              customerId: order.customerId,
+              category: cat,
+              fields: item.measurements,
+              version: latestVer + 1,
+              previousVersionId: prevVerId,
+              recordedBy: req.user?.name || 'owner',
+            });
+          } catch (mErr) {
+            console.warn('[Order Update Measurement Sync Warning]:', mErr.message);
+          }
+        }
+      }
+    }
 
     res.json({ success: true, data: order });
   } catch (err) {
