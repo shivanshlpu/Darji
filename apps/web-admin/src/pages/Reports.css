@@ -241,4 +241,18 @@
   .reports__card-val {
     font-size: var(--text-xl);
   }
+  .reports__chart-card {
+    min-width: 0 !important;
+    width: 100% !important;
+    overflow: hidden !important;
+  }
+  .reports__chart-body {
+    overflow: hidden !important;
+    max-width: 100% !important;
+  }
+  .reports__chart-body canvas,
+  .reports__chart-body > div {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
 }

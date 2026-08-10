@@ -323,9 +323,9 @@ export default function Reports() {
           </div>
           <div className="reports__chart-body">
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={topCustomersData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <BarChart data={topCustomersData} margin={{ top: 10, right: 10, left: 0, bottom: 25 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <XAxis dataKey="name" tick={{ fontSize: 10, angle: -45, textAnchor: 'end' }} interval={0} />
                 <YAxis tickFormatter={v => `₹${v/1000}k`} tick={{ fontSize: 12 }} />
                 <Tooltip formatter={(value) => [formatAmount(value), 'Total Spent']} />
                 <Bar dataKey="spending" fill="#C9A24B" radius={[6, 6, 0, 0]} />

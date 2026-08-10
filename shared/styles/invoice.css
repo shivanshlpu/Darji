@@ -504,3 +504,58 @@
     display: table-cell !important;
   }
 }
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .darji-target-invoice-container {
+    max-width: 100%;
+    min-height: auto;
+    padding: 0 0 16px 0;
+  }
+  .target-invoice-wrapper {
+    padding: 0 16px;
+  }
+  .target-header-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .target-header-brand-box {
+    width: 100%;
+  }
+  .target-header-divider {
+    display: none;
+  }
+  .target-header-inv-box {
+    width: 100%;
+    padding-top: 16px;
+    border-top: 1px solid #E2E8F0;
+  }
+  .target-summary-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .target-footer-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .target-contact-col {
+    padding: 16px 0;
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid #E2E8F0;
+    border-bottom: 1px solid #E2E8F0;
+    width: 100%;
+  }
+  .target-items-table {
+    font-size: 10px;
+  }
+  .target-items-table th, 
+  .target-items-table td {
+    padding: 8px 6px;
+  }
+  .target-table-container {
+    overflow-x: auto;
+  }
+}
