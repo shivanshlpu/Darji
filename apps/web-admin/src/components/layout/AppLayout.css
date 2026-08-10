@@ -26,6 +26,9 @@
 @media (max-width: 768px) {
   .app-layout__main {
     margin-left: 0;
+    min-width: 0;
+    max-width: 100vw;
+    overflow-x: hidden;
   }
   .app-layout__main--collapsed {
     margin-left: 0;
@@ -33,5 +36,8 @@
   .app-layout__content {
     padding: var(--space-3);
     padding-bottom: 76px;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 }

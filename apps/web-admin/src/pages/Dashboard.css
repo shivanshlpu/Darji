@@ -399,6 +399,23 @@
   .dashboard__sales-banner {
     flex-direction: column !important;
     align-items: flex-start !important;
+    padding: var(--space-4) !important;
+    overflow: hidden !important;
+  }
+  .dashboard__sales-banner-text {
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+  .dashboard__sales-banner p {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    max-width: 100% !important;
+  }
+  .dashboard__sales-banner-btn {
+    width: 100% !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
   }
   .dashboard__cards {
     grid-template-columns: 1fr 1fr !important;
@@ -413,11 +430,17 @@
   .dashboard__chart-card {
     min-width: 0 !important;
     width: 100% !important;
+    overflow: hidden !important;
   }
   .dashboard__chart-body {
     padding: 6px !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
+    overflow: hidden !important;
+    max-width: 100% !important;
+  }
+  .dashboard__chart-body canvas,
+  .dashboard__chart-body > div {
+    max-width: 100% !important;
+    width: 100% !important;
   }
   .dashboard__recent-header {
     padding: 12px 16px !important;
@@ -432,9 +455,5 @@
 @media (max-width: 480px) {
   .dashboard__cards {
     grid-template-columns: 1fr !important;
-  }
-  .dashboard__sales-banner-btn {
-    width: 100%;
-    justify-content: center;
   }
 }

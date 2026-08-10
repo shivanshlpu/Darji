@@ -1135,17 +1135,31 @@
     width: 100% !important;
     justify-content: center !important;
     margin-left: 0 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
   .orders__card-actions-wrapper {
     width: 100% !important;
+    max-width: 100% !important;
     gap: 8px !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+  .orders__transition-actions {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
   }
   .orders__gen-bill-btn, .orders__trans-btn, .orders__card-actions button {
     width: 100% !important;
+    max-width: 100% !important;
     box-sizing: border-box !important;
     justify-content: center !important;
     text-align: center !important;
-    white-space: normal !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
     padding: 10px 12px !important;
     font-size: 13px !important;
   }
@@ -1208,3 +1222,4 @@
     grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
   }
 }
+
