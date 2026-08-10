@@ -479,6 +479,10 @@
     grid-template-columns: 1fr !important;
   }
 
+  .billing__invoice-card {
+    padding: 12px !important;
+  }
+
   .billing__orders-panel {
     max-height: 220px !important;
   }

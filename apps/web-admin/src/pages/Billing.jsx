@@ -210,7 +210,7 @@ export default function Billing() {
                         }
                       }}
                     >
-                      <CheckCircle size={16} /> Mark as Paid
+                      <CheckCircle size={14} /> Mark as Paid
                     </button>
                   )}
                   <button
@@ -221,11 +221,12 @@ export default function Billing() {
                       }
                     }}
                   >
-                    <Printer size={16} /> {t('printPdfBtn', 'Print / Save PDF')}
+                    <Printer size={14} /> {t('printPdfBtn', 'Print PDF')}
                   </button>
                   <button
                     className="billing__action-btn billing__action-btn--whatsapp"
                     disabled={isSendingPdf}
+
                     onClick={async () => {
                       if (!activeInvoice) return;
                       setIsSendingPdf(true);
