@@ -81,6 +81,7 @@ export const api = {
   getShopSettings: () => request('/settings/shop'),
   updateShopSettings: (data) => request('/settings/shop', { method: 'PUT', body: JSON.stringify(data) }),
   clearEntryData: () => request('/system/clear-entry-data', { method: 'POST' }),
+  triggerCloudBackup: () => request('/system/backup', { method: 'POST' }),
 
   // WhatsApp Backend Integration
   getWhatsAppStatus: () => request('/whatsapp/status'),

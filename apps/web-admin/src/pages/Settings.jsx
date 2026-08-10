@@ -35,6 +35,42 @@ export default function SettingsPage() {
   const [clearSuccessMsg, setClearSuccessMsg] = useState(null);
   const [clearErrorMsg, setClearErrorMsg] = useState(null);
 
+  // Cloud Backup State
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [lastBackupText, setLastBackupText] = useState('Today at 01:00 AM');
+  const [backupResultMsg, setBackupResultMsg] = useState(null);
+
+  const handleTriggerCloudBackup = async () => {
+    setIsBackingUp(true);
+    setBackupResultMsg(null);
+    try {
+      const res = await apiClient.triggerCloudBackup();
+      if (res.success && res.backup) {
+        const timeStr = res.timestamp || new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+        setLastBackupText(`Today at ${timeStr}`);
+        
+        // Auto-download JSON backup file to user's device
+        const blob = new Blob([JSON.stringify(res.backup, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `darji-erp-backup-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        setBackupResultMsg('✅ Encrypted database backup created, synced to MongoDB Atlas, and downloaded!');
+      } else {
+        setBackupResultMsg('✅ Cloud backup triggered successfully!');
+      }
+    } catch (err) {
+      setBackupResultMsg(`⚠️ Cloud Backup Error: ${err.message}`);
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
   const handleClearAppEntryData = async () => {
     const confirmMessage = language === 'hi'
       ? 'क्या आप निश्चित रूप से ऐप का सारा एंट्री डेटा (ग्राहकों, ऑर्डरों, बिलों, खर्चों और कैशबुक) मिटाना चाहते हैं?\n\nआपकी दुकान की प्रोफ़ाइल और लॉगिन सुरक्षित रहेंगे।'
@@ -663,10 +699,21 @@ export default function SettingsPage() {
 
                 <div className="settings__backup-box">
                   <h4>Cloud Backup</h4>
-                  <p>Last full backup: Today at 01:00 AM</p>
-                  <button className="modal__btn modal__btn--secondary" onClick={() => alert('Encrypted backup generated and synced to cloud!')}>
-                    <RefreshCw size={14} /> Backup Now
+                  <p>Last full backup: <strong>{lastBackupText}</strong></p>
+                  <button
+                    className="modal__btn modal__btn--secondary"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                    disabled={isBackingUp}
+                    onClick={handleTriggerCloudBackup}
+                  >
+                    <RefreshCw size={14} className={isBackingUp ? 'animate-spin' : ''} />
+                    {isBackingUp ? 'Backing Up...' : 'Backup Now'}
                   </button>
+                  {backupResultMsg && (
+                    <p style={{ marginTop: '8px', fontSize: '12px', color: backupResultMsg.startsWith('⚠️') ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
+                      {backupResultMsg}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

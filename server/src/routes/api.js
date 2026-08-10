@@ -13,12 +13,13 @@ import { getCashbookByDate, closeCashbook } from '../controllers/cashbookControl
 import { getDashboardSummary } from '../controllers/dashboardController.js';
 import { processQueryAI } from '../controllers/queryAIController.js';
 import { getShopSettings, updateShopSettings } from '../controllers/settingsController.js';
-import { handleClearEntryData } from '../controllers/systemController.js';
+import { handleClearEntryData, generateFullDatabaseBackup } from '../controllers/systemController.js';
 
 const router = express.Router();
 
-// System Data Maintenance
+// System Data Maintenance & Cloud Backup
 router.post('/system/clear-entry-data', protect, auditLog('System', 'CLEAR_ENTRY_DATA'), handleClearEntryData);
+router.post('/system/backup', protect, auditLog('System', 'BACKUP_DATABASE'), generateFullDatabaseBackup);
 
 // Public Auth
 router.post('/auth/login', login);
