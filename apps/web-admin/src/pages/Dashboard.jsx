@@ -295,8 +295,8 @@ export default function Dashboard() {
                   data={pieChartData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={65}
-                  outerRadius={100}
+                  innerRadius={45}
+                  outerRadius={75}
                   dataKey="value"
                   stroke="none"
                   paddingAngle={3}

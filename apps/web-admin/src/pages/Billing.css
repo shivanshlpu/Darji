@@ -474,6 +474,44 @@
   }
 }
 
+@media (max-width: 768px) {
+  .billing__container {
+    grid-template-columns: 1fr !important;
+  }
+
+  .billing__orders-panel {
+    max-height: 220px !important;
+  }
+
+  .billing__actions {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .billing__actions button {
+    flex: 1 1 calc(50% - 6px) !important;
+    min-width: 120px !important;
+    padding: 8px 10px !important;
+    font-size: 12px !important;
+    justify-content: center !important;
+  }
+
+  .billing__item-rate-row {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .billing__discounts-row {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .billing__totals-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 @media (max-width: 900px) {
   .billing__container {
     grid-template-columns: 1fr;

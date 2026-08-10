@@ -1115,35 +1115,60 @@
 
 @media (max-width: 768px) {
   .orders__grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
   }
   .orders__toolbar {
-    flex-wrap: wrap;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    gap: 8px !important;
   }
   .orders__search {
-    max-width: 100%;
-    width: 100%;
+    max-width: 100% !important;
+    width: 100% !important;
   }
   .orders__select {
-    flex: 1;
-    min-width: 120px;
+    width: 100% !important;
+    flex: none !important;
   }
-  .customers__add-btn {
-    width: 100%;
-    justify-content: center;
+  .customers__add-btn, .orders__add-btn {
+    width: 100% !important;
+    justify-content: center !important;
     margin-left: 0 !important;
+  }
+  .orders__card-actions-wrapper {
+    width: 100% !important;
+    gap: 8px !important;
+  }
+  .orders__gen-bill-btn, .orders__trans-btn, .orders__card-actions button {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    justify-content: center !important;
+    text-align: center !important;
+    white-space: normal !important;
+    padding: 10px 12px !important;
+    font-size: 13px !important;
+  }
+  .orders__card-item-row {
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+  }
+  .orders__card-meas-pill {
+    white-space: normal !important;
+    word-break: break-word !important;
+    display: inline-block !important;
   }
   .modal {
     width: 95vw !important;
     max-height: 88vh !important;
     overflow-y: auto !important;
-    padding: 16px !important;
+    padding: 14px !important;
   }
   .modal__grid {
     grid-template-columns: 1fr !important;
   }
   .printable-bill__totals {
-    flex-direction: column;
+    flex-direction: column !important;
   }
 }
 

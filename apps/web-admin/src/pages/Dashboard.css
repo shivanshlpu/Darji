@@ -391,12 +391,39 @@
     grid-template-columns: repeat(2, 1fr);
   }
   .dashboard__charts {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
+  .dashboard__sales-banner {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
   .dashboard__cards {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+  .dashboard__card {
+    padding: 12px 14px !important;
+  }
+  .dashboard__card-value {
+    font-size: 20px !important;
+  }
+  .dashboard__chart-card {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  .dashboard__chart-body {
+    padding: 6px !important;
+    overflow-x: hidden !important;
+  }
+  .dashboard__recent-header {
+    padding: 12px 16px !important;
+  }
+  .dashboard__table-wrapper {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
   }
 }
