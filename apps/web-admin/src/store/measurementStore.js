@@ -31,13 +31,28 @@ const useMeasurementStore = create((set, get) => ({
   // Get latest version per category for a customer (or single category if specified)
   getLatestByCategory: (customerId, category) => {
     const { measurements } = get();
-    const customerMeasurements = measurements.filter(m => m.customerId === customerId);
+    if (!customerId) return category ? null : [];
+
+    const customerMeasurements = measurements.filter(m =>
+      m.customerId === customerId || String(m.customerId) === String(customerId)
+    );
     
     if (category) {
-      const match = customerMeasurements
-        .filter(m => m.category === category)
-        .sort((a, b) => (b.version || 0) - (a.version || 0))[0];
-      return match || null;
+      const catLower = category.toLowerCase();
+      const isTopGroup = ['topwear', 'shirt', 'kurta', 'sherwani', 'blazer', 'suit', 'top'].includes(catLower);
+      const isBottomGroup = ['bottomwear', 'pant', 'trouser', 'salwar', 'pyjama', 'jeans', 'bottom'].includes(catLower);
+
+      const matches = customerMeasurements
+        .filter(m => {
+          if (m.category === category) return true;
+          const mCat = (m.category || '').toLowerCase();
+          if (isTopGroup && ['topwear', 'shirt', 'kurta', 'sherwani', 'blazer', 'suit', 'top'].includes(mCat)) return true;
+          if (isBottomGroup && ['bottomwear', 'pant', 'trouser', 'salwar', 'pyjama', 'jeans', 'bottom'].includes(mCat)) return true;
+          return false;
+        })
+        .sort((a, b) => (b.version || 0) - (a.version || 0));
+
+      return matches[0] || null;
     }
 
     const latest = {};
@@ -53,7 +68,10 @@ const useMeasurementStore = create((set, get) => ({
   getHistory: (customerId, category) => {
     const { measurements } = get();
     return measurements
-      .filter(m => m.customerId === customerId && m.category === category)
+      .filter(m =>
+        (m.customerId === customerId || String(m.customerId) === String(customerId)) &&
+        (m.category === category || (m.category || '').toLowerCase() === (category || '').toLowerCase())
+      )
       .sort((a, b) => (b.version || 0) - (a.version || 0));
   },
 
@@ -62,7 +80,10 @@ const useMeasurementStore = create((set, get) => ({
     if (!customerId || !category || !fields || Object.keys(fields).length === 0) return null;
     const { measurements } = get();
     const existing = measurements
-      .filter(m => m.customerId === customerId && m.category === category)
+      .filter(m =>
+        (m.customerId === customerId || String(m.customerId) === String(customerId)) &&
+        (m.category === category || (m.category || '').toLowerCase() === (category || '').toLowerCase())
+      )
       .sort((a, b) => (b.version || 0) - (a.version || 0));
 
     const latestVersion = existing.length > 0 ? (existing[0].version || 0) : 0;

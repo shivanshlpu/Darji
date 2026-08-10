@@ -19,12 +19,15 @@ export default function CustomerProfile() {
   const navigate = useNavigate();
   const { customers, selectCustomer, selectedCustomer, updateCustomer, fetchCustomersFromDB } = useCustomerStore();
   const { getOrdersByCustomer, fetchOrdersFromDB } = useAppStore();
-  const { measurements, addMeasurement, getLatestByCategory, getHistory } = useMeasurementStore();
+  const { measurements, addMeasurement, getLatestByCategory, getHistory, fetchMeasurementsFromDB } = useMeasurementStore();
 
   useEffect(() => {
     fetchCustomersFromDB();
     fetchOrdersFromDB();
-  }, []);
+    if (id) {
+      fetchMeasurementsFromDB(id);
+    }
+  }, [id]);
   const [activeTab, setActiveTab] = useState('measurements');
   const [showMeasurementModal, setShowMeasurementModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('topWear');
@@ -48,13 +51,11 @@ export default function CustomerProfile() {
   const customer = useMemo(() => customers.find(c => c._id === id), [id, customers]);
   const orders = useMemo(() => getOrdersByCustomer(id), [id]);
 
-  // Load measurements from mock data on mount
   useEffect(() => {
-    if (customer && measurements.length === 0) {
-      const allMeasurements = generateMeasurements(customers);
-      useMeasurementStore.setState({ measurements: allMeasurements, isLoaded: true });
+    if (id) {
+      fetchMeasurementsFromDB(id);
     }
-  }, [customer]);
+  }, [id, customer]);
 
   const latestMeasurements = useMemo(() => getLatestByCategory(id), [id, measurements]);
 
