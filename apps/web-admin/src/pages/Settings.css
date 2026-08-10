@@ -269,11 +269,57 @@
   color: var(--color-success);
 }
 
+.settings__mobile-dropdown-container {
+  display: none;
+}
+
 @media (max-width: 900px) {
   .settings__container {
     grid-template-columns: 1fr;
   }
   .settings__grid, .settings__backup-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .settings__tabs {
+    display: none !important;
+  }
+
+  .settings__mobile-dropdown-container {
+    display: flex !important;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+  }
+
+  .settings__mobile-dropdown-label {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    color: var(--color-gold-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .settings__mobile-select {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    border: 2px solid var(--color-gold-500);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+    outline: none;
+    cursor: pointer;
+  }
+
+  .settings__branding-row {
+    flex-direction: column !important;
   }
 }

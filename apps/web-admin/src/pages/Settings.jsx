@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  Store, FileText, Database, Shield, CheckCircle, Save, QrCode, MessageSquare, LogOut, Send, RefreshCw, Smartphone, Download, Image, Trash2, Upload, Plus, PhoneCall
+  Store, FileText, Database, Shield, CheckCircle, Save, QrCode, MessageSquare, LogOut, Send, RefreshCw, Smartphone, Download, Image, Trash2, Upload, Plus, PhoneCall, SlidersHorizontal
 } from 'lucide-react';
 import PwaInstallPrompt from '../components/PwaInstallPrompt';
 import useSettingsStore from '../store/settingsStore';
@@ -278,7 +278,27 @@ export default function SettingsPage() {
       </div>
 
       <div className="settings__container">
-        {/* Sidebar Tabs */}
+        {/* Mobile Dropdown Selector (Visible on Phone Screens <= 768px) */}
+        <div className="settings__mobile-dropdown-container">
+          <label className="settings__mobile-dropdown-label">
+            <SlidersHorizontal size={14} /> {language === 'hi' ? 'सेटिंग्स श्रेणी चुनें:' : 'Select Settings Category:'}
+          </label>
+          <select
+            className="settings__mobile-select"
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value)}
+          >
+            <option value="shop">🏬 {t('shopProfileTab', 'Shop Profile & Branding')}</option>
+            <option value="invoice">📄 {t('invoiceGstTab', 'Invoice & GST Config')}</option>
+            <option value="whatsapp">💬 {t('whatsappTab', 'WhatsApp Integration')}</option>
+            <option value="backup">💾 {t('offlineBackupTab', 'Offline & Backup')}</option>
+            <option value="security">🛡️ {language === 'hi' ? 'सुरक्षा व पासवर्ड' : 'Security & Password'}</option>
+            <option value="pwa">📱 {language === 'hi' ? 'ऐप इंस्टॉल करें' : 'App Installation'}</option>
+            <option value="reset">🗑️ {language === 'hi' ? 'डेटा साफ़ करें' : 'Clear App Data'}</option>
+          </select>
+        </div>
+
+        {/* Sidebar Tabs (Visible on Desktop Screens > 768px) */}
         <div className="settings__tabs">
           <button className={`settings__tab ${activeTab === 'shop' ? 'active' : ''}`} onClick={() => setActiveTab('shop')}>
             <Store size={18} /> {t('shopProfileTab', 'Shop Profile & Branding')}
