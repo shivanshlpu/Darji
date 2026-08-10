@@ -82,9 +82,9 @@
 
 .login__brand-title {
   font-family: var(--font-heading);
-  font-size: 3.5rem;
+  font-size: clamp(2rem, 8vw, 3.5rem);
   font-weight: 700;
-  letter-spacing: 6px;
+  letter-spacing: clamp(2px, 1vw, 6px);
   background: linear-gradient(135deg, var(--color-gold-500) 0%, var(--color-gold-300) 50%, var(--color-gold-500) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -332,5 +332,22 @@
   }
   .login__form-section {
     border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .login__branding {
+    padding: var(--space-6) var(--space-4);
+    min-height: 200px;
+  }
+  .login__form-section {
+    padding: var(--space-5);
+  }
+  .login__form-card {
+    max-width: 100%;
+  }
+  .login__brand-subtitle {
+    font-size: var(--text-base);
+    margin-bottom: var(--space-4);
   }
 }

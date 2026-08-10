@@ -565,7 +565,33 @@
   .customers__search-input {
     width: 100%;
   }
+  .customers__add-btn {
+    width: 100%;
+    justify-content: center;
+  }
   .modal__grid {
     grid-template-columns: 1fr;
+  }
+  .customers__table-wrapper {
+    -webkit-overflow-scrolling: touch;
+  }
+  .customers__filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .customers__filter-group {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .customers__filter-chips {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+  }
+  .customers__chip {
+    flex-shrink: 0;
   }
 }

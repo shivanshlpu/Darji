@@ -254,4 +254,16 @@
   .expenses__cards {
     grid-template-columns: 1fr 1fr;
   }
+  .expenses__card {
+    padding: 8px 10px;
+  }
+  .expenses__card-val {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 360px) {
+  .expenses__cards {
+    grid-template-columns: 1fr;
+  }
 }

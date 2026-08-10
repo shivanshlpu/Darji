@@ -610,6 +610,7 @@
   .profile__stats {
     width: 100%;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .profile__measurement-grid {
     grid-template-columns: 1fr;
@@ -619,5 +620,51 @@
   }
   .profile__fields-grid {
     grid-template-columns: 1fr;
+  }
+  .profile__tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+  }
+  .profile__tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile__measurement-fields {
+    grid-template-columns: 1fr;
+  }
+  .profile__hero-left {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .profile__details {
+    justify-content: center;
+  }
+  .profile__tags {
+    justify-content: center;
+  }
+  .profile__stats {
+    gap: var(--space-3);
+  }
+  .profile__stat {
+    min-width: 80px;
+    padding: var(--space-2) var(--space-3);
+  }
+  .profile__order-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+  .profile__order-date {
+    margin-left: 0;
+  }
+  .profile__section-header {
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: flex-start;
   }
 }

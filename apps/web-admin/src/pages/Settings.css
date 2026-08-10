@@ -320,6 +320,37 @@
   }
 
   .settings__branding-row {
-    flex-direction: column !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .settings__wa-status {
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: stretch;
+  }
+
+  .settings__footer {
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: stretch;
+  }
+
+  .settings__footer button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .settings__card {
+    padding: var(--space-4);
+  }
+
+  .settings__backup-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings__preview-box {
+    flex-direction: column;
+    gap: var(--space-2);
+    text-align: center;
   }
 }

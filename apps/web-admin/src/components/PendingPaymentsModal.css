@@ -311,3 +311,42 @@
   border-top: 1px solid var(--border-default);
   background: var(--bg-primary);
 }
+
+@media (max-width: 768px) {
+  .pending-modal__header {
+    padding: var(--space-4);
+  }
+  .pending-modal__banner {
+    padding: var(--space-3) var(--space-4);
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .pending-modal__search-box {
+    width: 100%;
+  }
+  .pending-modal__body {
+    padding: var(--space-3) var(--space-4);
+  }
+  .pending-card__user {
+    min-width: 0;
+  }
+  .pending-card__main {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .pending-card__amount-group {
+    align-items: flex-start;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  .pending-card__actions {
+    flex-wrap: wrap;
+  }
+  .pending-card__btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+  .pending-modal__footer {
+    padding: var(--space-3) var(--space-4);
+  }
+}

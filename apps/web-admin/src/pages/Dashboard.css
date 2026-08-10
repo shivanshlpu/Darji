@@ -416,7 +416,8 @@
   }
   .dashboard__chart-body {
     padding: 6px !important;
-    overflow-x: hidden !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
   }
   .dashboard__recent-header {
     padding: 12px 16px !important;
@@ -425,5 +426,15 @@
     width: 100% !important;
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard__cards {
+    grid-template-columns: 1fr !important;
+  }
+  .dashboard__sales-banner-btn {
+    width: 100%;
+    justify-content: center;
   }
 }

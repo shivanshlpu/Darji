@@ -779,7 +779,7 @@
 
 .orders__item-meas-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
   gap: var(--space-2);
 }
 
@@ -855,7 +855,7 @@
 
 .billing-modal__modifiers {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: var(--space-3);
   background: var(--bg-primary);
   padding: var(--space-4);
@@ -1170,6 +1170,41 @@
   .printable-bill__totals {
     flex-direction: column !important;
   }
+  .printable-bill__header {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .printable-bill__meta-block {
+    text-align: left;
+  }
+  .printable-bill__cust-card {
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: flex-start;
+  }
+  .printable-bill__sum-table {
+    width: 100%;
+  }
+  .orders__bill-item-row {
+    flex-direction: column;
+    gap: var(--space-2);
+    align-items: flex-start;
+  }
+  .orders__bill-item-inputs {
+    width: 100%;
+    flex-wrap: wrap;
+  }
 }
 
-
+@media (max-width: 480px) {
+  .orders__status-bar {
+    gap: var(--space-1);
+  }
+  .orders__status-chip {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-xs);
+  }
+  .orders__item-meas-grid-labeled {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  }
+}

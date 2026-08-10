@@ -216,7 +216,7 @@
 /* Modifiers */
 .billing__modifiers {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: var(--space-4);
   padding: var(--space-4);
   background: var(--bg-primary);
@@ -326,7 +326,7 @@
 
 .billing__sheet-summary {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: 1fr minmax(200px, 280px);
   gap: var(--space-6);
   font-size: var(--text-xs);
 }
@@ -483,6 +483,23 @@
     max-height: 220px !important;
   }
 
+  .billing__actions-bar {
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: stretch;
+  }
+
+  .billing__actions-right {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .billing__action-btn {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-width: 0;
+  }
+
   .billing__actions {
     flex-wrap: wrap !important;
     gap: 8px !important;
@@ -510,6 +527,34 @@
   .billing__totals-grid {
     grid-template-columns: 1fr !important;
   }
+
+  .billing__sheet {
+    padding: var(--space-4);
+  }
+
+  .billing__sheet-header {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .billing__sheet-title {
+    text-align: left;
+  }
+
+  .billing__sheet-cust {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .billing__sheet-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .billing__sheet-footer {
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: flex-start;
+  }
 }
 
 @media (max-width: 900px) {
@@ -517,5 +562,4 @@
     grid-template-columns: 1fr;
   }
 }
-
 

@@ -227,3 +227,40 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+@media (max-width: 768px) {
+  .query-ai__banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+  .query-ai__chat-card {
+    height: calc(100vh - 260px);
+    min-height: 360px;
+  }
+  .query-ai__chat-history {
+    padding: var(--space-4);
+    gap: var(--space-4);
+  }
+  .query-ai__message {
+    max-width: 92%;
+  }
+  .query-ai__input-bar {
+    padding: var(--space-3);
+    gap: var(--space-2);
+  }
+  .query-ai__bubble {
+    padding: var(--space-3) var(--space-4);
+  }
+}
+
+@media (max-width: 480px) {
+  .query-ai__banner-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+  .query-ai__message {
+    max-width: 95%;
+  }
+}

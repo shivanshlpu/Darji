@@ -60,3 +60,13 @@
     max-width: 54px;
   }
 }
+
+@media (max-width: 375px) {
+  .mobile-bottom-nav__label {
+    font-size: 9px;
+    max-width: 46px;
+  }
+  .mobile-bottom-nav__item {
+    gap: 2px;
+  }
+}

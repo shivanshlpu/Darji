@@ -215,4 +215,30 @@
   .reports__period-selector {
     flex-wrap: wrap;
   }
+  .reports__custom-inputs {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+  .reports__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .reports__actions {
+    width: 100%;
+  }
+  .reports__export-btn {
+    flex: 1;
+    justify-content: center;
+  }
+  .reports__filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .reports__active-range-badge {
+    margin-left: 0;
+  }
+  .reports__card-val {
+    font-size: var(--text-xl);
+  }
 }
