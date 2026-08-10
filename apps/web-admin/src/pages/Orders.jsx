@@ -1704,25 +1704,22 @@ export default function Orders() {
                           </div>
 
                           {/* Inline Custom Measurement Adder for this Item */}
-                          <div style={{ display: 'flex', gap: '6px', marginTop: '10px', alignItems: 'center', background: '#f8fafc', padding: '6px 10px', borderRadius: '6px', border: '1px dashed #cbd5e1' }}>
-                            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-navy-700)', whiteSpace: 'nowrap' }}>
-                              + Custom Measurement:
-                            </span>
+                          <div className="orders__custom-measurement-adder" style={{ marginTop: '10px', background: '#f8fafc' }}>
+                            <span>+ Custom Measurement:</span>
                             <input
                               type="text"
                               placeholder="Part (e.g. Wrist, Cross-Back)..."
                               id={`new_custom_key_${idx}`}
-                              style={{ flex: 1, padding: '4px 8px', fontSize: '12px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                              className="meas-part-input"
                             />
                             <input
                               type="text"
                               placeholder="Size (e.g. 14.5)"
                               id={`new_custom_val_${idx}`}
-                              style={{ width: '90px', padding: '4px 8px', fontSize: '12px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                              className="meas-size-input"
                             />
                             <button
                               type="button"
-                              style={{ background: 'var(--color-gold-500)', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
                               onClick={() => {
                                 const kEl = document.getElementById(`new_custom_key_${idx}`);
                                 const vEl = document.getElementById(`new_custom_val_${idx}`);
@@ -1910,25 +1907,22 @@ export default function Orders() {
                         </div>
 
                         {/* Inline Custom Measurement Key Adder */}
-                        <div style={{ display: 'flex', gap: '6px', marginTop: '8px', alignItems: 'center', background: '#ffffff', padding: '6px 8px', borderRadius: '6px', border: '1px dashed #cbd5e1' }}>
-                          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-navy-700)', whiteSpace: 'nowrap' }}>
-                            + Custom Measurement:
-                          </span>
+                        <div className="orders__custom-measurement-adder" style={{ marginTop: '8px', background: '#ffffff' }}>
+                          <span>+ Custom Measurement:</span>
                           <input
                             type="text"
                             placeholder="Part (e.g. Wrist, Depth)..."
                             id={`edit_custom_key_${idx}`}
-                            style={{ flex: 1, padding: '4px 8px', fontSize: '12px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                            className="meas-part-input"
                           />
                           <input
                             type="text"
                             placeholder="Size (e.g. 14.5)"
                             id={`edit_custom_val_${idx}`}
-                            style={{ width: '90px', padding: '4px 8px', fontSize: '12px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                            className="meas-size-input"
                           />
                           <button
                             type="button"
-                            style={{ background: 'var(--color-gold-500)', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
                             onClick={() => {
                               const kEl = document.getElementById(`edit_custom_key_${idx}`);
                               const vEl = document.getElementById(`edit_custom_val_${idx}`);
