@@ -6,8 +6,8 @@ const measurementSchema = new mongoose.Schema(
     customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
     category: {
       type: String,
-      enum: ['shirt', 'pant', 'blouse', 'suit', 'kurta', 'lehenga', 'sareeBlouse', 'coat', 'custom'],
       required: true,
+      trim: true,
     },
     fields: { type: Map, of: mongoose.Schema.Types.Mixed, default: {} },
     version: { type: Number, required: true, default: 1 },

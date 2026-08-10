@@ -1,12 +1,18 @@
 import Measurement from '../models/Measurement.js';
+import Shop from '../models/Shop.js';
 
 export const getCustomerMeasurements = async (req, res) => {
   try {
-    const measurements = await Measurement.find({
-      shopId: req.shopId,
-      customerId: req.params.customerId,
-      isDeleted: false,
-    }).sort({ version: -1 });
+    let shopId = req.shopId || req.user?.shopId;
+    if (!shopId) {
+      const defaultShop = await Shop.findOne({ isDeleted: false });
+      shopId = defaultShop?._id;
+    }
+
+    const query = { customerId: req.params.customerId, isDeleted: false };
+    if (shopId) query.shopId = shopId;
+
+    const measurements = await Measurement.find(query).sort({ version: -1 });
 
     res.json({ success: true, data: measurements });
   } catch (err) {
@@ -18,21 +24,29 @@ export const createMeasurementVersion = async (req, res) => {
   try {
     const { customerId, category, fields, recordedBy } = req.body;
 
-    const existing = await Measurement.find({
-      shopId: req.shopId,
-      customerId,
-      category,
-      isDeleted: false,
-    }).sort({ version: -1 });
+    if (!customerId || !category) {
+      return res.status(400).json({ success: false, message: 'customerId and category are required' });
+    }
 
-    const latestVersion = existing.length > 0 ? existing[0].version : 0;
+    let shopId = req.shopId || req.user?.shopId;
+    if (!shopId) {
+      const defaultShop = await Shop.findOne({ isDeleted: false });
+      shopId = defaultShop?._id;
+    }
+
+    const query = { customerId, category, isDeleted: false };
+    if (shopId) query.shopId = shopId;
+
+    const existing = await Measurement.find(query).sort({ version: -1 });
+
+    const latestVersion = existing.length > 0 ? (existing[0].version || 0) : 0;
     const previousVersionId = existing.length > 0 ? existing[0]._id : null;
 
     const measurement = await Measurement.create({
-      shopId: req.shopId,
+      shopId: shopId || '6a738b5176dab967966f9041',
       customerId,
       category,
-      fields,
+      fields: fields || {},
       version: latestVersion + 1,
       previousVersionId,
       recordedBy: recordedBy || req.user?.name || 'owner',
