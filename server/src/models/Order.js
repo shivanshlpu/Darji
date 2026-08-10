@@ -4,6 +4,7 @@ const orderItemSchema = new mongoose.Schema({
   name: { type: String, required: true },
   category: { type: String, required: true },
   measurementVersionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Measurement', default: null },
+  measurements: { type: Map, of: mongoose.Schema.Types.Mixed, default: {} },
   qty: { type: Number, required: true, default: 1 },
   price: { type: Number, required: true, default: 0 },
   notes: { type: String, default: '' },

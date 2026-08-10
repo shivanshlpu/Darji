@@ -147,14 +147,28 @@ export default function Orders() {
 
   const handleSaveEditedOrder = () => {
     if (!editingOrder) return;
-    const subtotal = editItems.reduce((s, i) => s + (Number(i.qty || 1) * Number(i.price || 0)), 0);
+
+    // Auto-capture any unsubmitted custom measurements from the DOM
+    const finalEditItems = [...editItems];
+    finalEditItems.forEach((item, idx) => {
+      const kEl = document.getElementById(`edit_custom_key_${idx}`);
+      const vEl = document.getElementById(`edit_custom_val_${idx}`);
+      if (kEl && kEl.value.trim() && vEl && vEl.value.trim()) {
+        item.measurements = {
+          ...(item.measurements || {}),
+          [kEl.value.trim()]: vEl.value.trim()
+        };
+      }
+    });
+
+    const subtotal = finalEditItems.reduce((s, i) => s + (Number(i.qty || 1) * Number(i.price || 0)), 0);
     const totalAmount = Number(editTotalAmount) || subtotal;
     const advancePaid = Number(editAdvancePaid) || 0;
     const balanceDue = Math.max(0, totalAmount - advancePaid);
     const paymentStatus = balanceDue <= 0 ? 'paid' : advancePaid > 0 ? 'partial' : 'unpaid';
 
     // 1. Save all edited measurements directly to customer profile & MongoDB Atlas
-    editItems.forEach(item => {
+    finalEditItems.forEach(item => {
       if (item.measurements && Object.keys(item.measurements).length > 0) {
         const catKey = item.category || 'topWear';
         addMeasurement(
@@ -167,7 +181,7 @@ export default function Orders() {
     });
 
     const payload = {
-      items: editItems,
+      items: finalEditItems,
       subtotal,
       totalAmount,
       advancePaid,
@@ -520,6 +534,19 @@ export default function Orders() {
   const handleCreateOrder = (e) => {
     e.preventDefault();
 
+    // Auto-capture any unsubmitted custom measurements from the DOM
+    const finalOrderItems = [...orderItems];
+    finalOrderItems.forEach((item, idx) => {
+      const kEl = document.getElementById(`new_custom_key_${idx}`);
+      const vEl = document.getElementById(`new_custom_val_${idx}`);
+      if (kEl && kEl.value.trim() && vEl && vEl.value.trim()) {
+        item.measurements = {
+          ...(item.measurements || {}),
+          [kEl.value.trim()]: vEl.value.trim()
+        };
+      }
+    });
+
     let custId = selectedCustId;
     let custName = '';
     let custMobile = '';
@@ -554,13 +581,13 @@ export default function Orders() {
     }
 
     // Save measurements entered in this order to the customer's permanent profile
-    orderItems.forEach(item => {
+    finalOrderItems.forEach(item => {
       if (item.measurements && Object.keys(item.measurements).length > 0) {
         addMeasurement(custId, custName, item.category, item.measurements);
       }
     });
 
-    const subtotal = orderItems.reduce((s, it) => s + (it.qty * (parseFloat(it.price) || 0)), 0);
+    const subtotal = finalOrderItems.reduce((s, it) => s + (it.qty * (parseFloat(it.price) || 0)), 0);
     const paid = parseFloat(advancePaid) || 0;
     const pending = Math.max(0, subtotal - paid);
     const paymentStatus = paid >= subtotal ? 'paid' : paid > 0 ? 'partial' : 'unpaid';
@@ -601,7 +628,7 @@ export default function Orders() {
       deliveryDate: deliveryDate ? new Date(deliveryDate).toISOString() : new Date().toISOString(),
       priority,
       status: 'pending',
-      items: orderItems,
+      items: finalOrderItems,
       subtotal,
       paidAmount: paid,
       pendingAmount: pending,
@@ -613,7 +640,7 @@ export default function Orders() {
     addOrder(newOrder);
 
     // Calculate expected delivery days & date for order register
-    const itemsSummaryList = orderItems.map(it => `${it.qty}x ${it.name}`).join(', ');
+    const itemsSummaryList = finalOrderItems.map(it => `${it.qty}x ${it.name}`).join(', ');
     const deliveryDateObj = deliveryDate ? new Date(deliveryDate) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     const expectedDays = Math.max(1, Math.ceil((deliveryDateObj - new Date()) / (1000 * 60 * 60 * 24)));
     const deliveryFormatted = deliveryDateObj.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
