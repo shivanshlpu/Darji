@@ -146,11 +146,21 @@ export default function Reports() {
 
   // Top 5 High Value Customers
   const topCustomersData = useMemo(() => {
-    return [...customers]
-      .sort((a, b) => b.totalSpending - a.totalSpending)
-      .slice(0, 5)
-      .map(c => ({ name: c.name.split(' ')[0], spending: c.totalSpending }));
-  }, [customers]);
+    const custMap = {};
+    filteredOrders.forEach(o => {
+      const cId = o.customerId || (o.customer && o.customer._id) || o.customerName || 'Unknown';
+      const cName = (o.customer && o.customer.name) || o.customerName || 'Unknown';
+      if (!custMap[cId]) {
+        custMap[cId] = { name: cName.split(' ')[0], spending: 0 };
+      }
+      custMap[cId].spending += (o.subtotal || o.totalAmount || 0);
+    });
+    
+    return Object.values(custMap)
+      .filter(c => c.spending > 0)
+      .sort((a, b) => b.spending - a.spending)
+      .slice(0, 5);
+  }, [filteredOrders]);
 
   const dateRangeStr = useMemo(() => {
     return `${formatDateDMY(effectiveDateRange.from)} to ${formatDateDMY(effectiveDateRange.to)}`;
@@ -322,15 +332,29 @@ export default function Reports() {
             <h3>Top 5 High Value Customers</h3>
           </div>
           <div className="reports__chart-body">
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={topCustomersData} margin={{ top: 10, right: 10, left: 0, bottom: 25 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 10, angle: -45, textAnchor: 'end' }} interval={0} />
-                <YAxis tickFormatter={v => `₹${v/1000}k`} tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(value) => [formatAmount(value), 'Total Spent']} />
-                <Bar dataKey="spending" fill="#C9A24B" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {topCustomersData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={topCustomersData} margin={{ top: 10, right: 10, left: 0, bottom: 25 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 10, angle: -45, textAnchor: 'end' }} interval={0} />
+                  <YAxis 
+                    tickFormatter={v => {
+                      if (v >= 10000000) return `₹${(v/10000000).toFixed(1)}Cr`;
+                      if (v >= 100000) return `₹${(v/100000).toFixed(1)}L`;
+                      if (v >= 1000) return `₹${(v/1000).toFixed(1)}k`;
+                      return `₹${v}`;
+                    }} 
+                    tick={{ fontSize: 12 }} 
+                  />
+                  <Tooltip formatter={(value) => [formatAmount(value), 'Total Spent']} />
+                  <Bar dataKey="spending" fill="#C9A24B" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ height: '260px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}>
+                No customer data for selected period
+              </div>
+            )}
           </div>
         </div>
       </div>
