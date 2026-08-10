@@ -89,13 +89,25 @@ export default function Orders() {
   const [editDeliveryDate, setEditDeliveryDate] = useState('');
   const [editStatus, setEditStatus] = useState('pending');
 
-  const openEditModal = (order, e) => {
+  const openEditModal = async (order, e) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
     setEditingOrder(order);
-    setEditItems(JSON.parse(JSON.stringify(order.items || [])));
+    if (order.customerId) {
+      await fetchMeasurementsFromDB(order.customerId);
+    }
+    const populatedItems = (order.items || []).map(item => {
+      const existingMeas = (item.measurements && Object.keys(item.measurements).length > 0)
+        ? item.measurements
+        : getCustomerMeasurementForCategory(order.customerId, item.category || item.name);
+      return {
+        ...item,
+        measurements: existingMeas && Object.keys(existingMeas).length > 0 ? { ...existingMeas } : (item.measurements || {}),
+      };
+    });
+    setEditItems(JSON.parse(JSON.stringify(populatedItems)));
     const tot = order.totalAmount || order.subtotal || 0;
     setEditTotalAmount(tot);
     setEditAdvancePaid(order.advancePaid || order.paidAmount || 0);
@@ -144,10 +156,11 @@ export default function Orders() {
     // 1. Save all edited measurements directly to customer profile & MongoDB Atlas
     editItems.forEach(item => {
       if (item.measurements && Object.keys(item.measurements).length > 0) {
+        const catKey = item.category || 'topWear';
         addMeasurement(
           editingOrder.customerId,
           editingOrder.customerName,
-          item.category || 'topWear',
+          catKey,
           item.measurements
         );
       }
@@ -979,16 +992,23 @@ export default function Orders() {
                 </div>
 
                 <div className="orders__card-items">
-                  {order.items.map((item, i) => (
-                    <div key={i} className="orders__card-item-row">
-                      <span className="orders__card-item">{item.qty}× {item.name}</span>
-                      {item.measurements && Object.keys(item.measurements).length > 0 && (
-                        <span className="orders__card-meas-pill">
-                          {Object.entries(item.measurements).map(([k, v]) => `${k}:${v}`).join(', ')}
-                        </span>
-                      )}
-                    </div>
-                  ))}
+                  {order.items.map((item, i) => {
+                    const measData = (item.measurements && Object.keys(item.measurements).length > 0)
+                      ? item.measurements
+                      : getCustomerMeasurementForCategory(order.customerId, item.category || item.name);
+                    const hasMeas = measData && Object.keys(measData).length > 0;
+
+                    return (
+                      <div key={i} className="orders__card-item-row">
+                        <span className="orders__card-item">{item.qty}× {item.name}</span>
+                        {hasMeas && (
+                          <span className="orders__card-meas-pill">
+                            {Object.entries(measData).map(([k, v]) => `${k}:${v}`).join(', ')}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Amount Paid vs Balance Due Breakdown */}
