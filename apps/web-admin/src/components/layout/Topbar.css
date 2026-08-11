@@ -257,7 +257,7 @@
 /* Responsive */
 @media (max-width: 768px) {
   .topbar__menu-btn {
-    display: flex;
+    display: none !important;
   }
   .topbar__search {
     display: none;

@@ -50,9 +50,6 @@ export default function Topbar({ pageTitle }) {
   return (
     <header className="topbar">
       <div className="topbar__left">
-        <button className="topbar__menu-btn" onClick={toggleSidebar}>
-          <Menu size={20} />
-        </button>
         <h2 className="topbar__title">{pageTitle}</h2>
       </div>
 
