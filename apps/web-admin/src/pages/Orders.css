@@ -1077,26 +1077,32 @@
     background: #FFFFFF !important;
     margin: 0 !important;
     padding: 0 !important;
-    overflow: hidden !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: auto !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
-  body > * {
-    display: none !important;
+  body * {
+    visibility: hidden;
   }
   #printable-bill, #printable-bill * {
-    display: block !important;
+    visibility: visible;
   }
   #printable-bill {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 210mm;
-    max-height: 297mm;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
     margin: 0 !important;
     padding: 20px !important;
     box-shadow: none !important;
     border: none !important;
     page-break-after: avoid !important;
     page-break-inside: avoid !important;
+    break-after: avoid !important;
+    break-inside: avoid !important;
   }
   #printable-bill .printable-bill__header,
   #printable-bill .printable-bill__cust-card,
@@ -1112,6 +1118,8 @@
   }
   #printable-bill tr {
     display: table-row !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
   #printable-bill th, #printable-bill td {
     display: table-cell !important;

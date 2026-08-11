@@ -5,7 +5,7 @@ const translations = {
     // Navigation
     dashboard: 'Dashboard',
     orders: 'Orders & Measurements',
-    billing: 'Billing & Invoices',
+    billing: 'Billing',
     expenses: 'Shop Expenses',
     cashbook: 'Cash Book',
     reports: 'Sales & Financial Reports',
@@ -70,8 +70,8 @@ const translations = {
     whatsappBtn: 'WhatsApp',
 
     // Billing Page
-    billingHeading: 'Invoices & Billing',
-    billingSubheading: 'Digital invoices, automatic round-off, sequential numbering & WhatsApp sharing',
+    billingHeading: 'Billing',
+    billingSubheading: 'Digital invoices & WhatsApp sharing',
     selectOrderTitle: 'Select an Order to Generate Invoice',
     selectOrderSub: 'Choose an order from the left list to calculate discounts, and print or share the invoice PDF.',
     searchOrderPlaceholder: 'Search order #, Token # or customer...',
@@ -217,8 +217,8 @@ const translations = {
     whatsappBtn: 'WhatsApp रिमाइंड',
 
     // Billing Page
-    billingHeading: 'इनवॉइस और बिलिंग',
-    billingSubheading: 'डिजिटल इनवॉइस चालान, स्वचालित राउंड-ऑफ, नंबरिंग और व्हाट्सएप शेयरिंग',
+    billingHeading: 'बिलिंग',
+    billingSubheading: 'डिजिटल इनवॉइस चालान व व्हाट्सएप शेयरिंग',
     selectOrderTitle: 'इनवॉइस बनाने के लिए बाएं सूची से ऑर्डर चुनें',
     selectOrderSub: 'छूट, राउंड ऑफ देखने और पीडीएफ प्रिंट या व्हाट्सएप पर शेयर करने के लिए ऑर्डर पर क्लिक करें।',
     searchOrderPlaceholder: 'ऑर्डर #, टोकन # या ग्राहक नाम खोजें...',

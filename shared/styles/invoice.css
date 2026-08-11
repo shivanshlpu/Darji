@@ -468,11 +468,21 @@
 
 /* Printable Rules */
 @media print {
-  body > * {
-    display: none !important;
+  html, body {
+    background: #FFFFFF !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: auto !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body * {
+    visibility: hidden;
   }
   #printable-bill, #printable-bill * {
-    display: block !important;
+    visibility: visible;
   }
   #printable-bill {
     position: absolute !important;
@@ -482,6 +492,9 @@
     min-height: 297mm !important;
     box-shadow: none !important;
     border: none !important;
+    margin: 0 auto !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
   .target-header-container,
   .target-cust-field-row,
@@ -499,6 +512,8 @@
   }
   .target-items-table tr {
     display: table-row !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
   .target-items-table th, .target-items-table td {
     display: table-cell !important;
@@ -508,54 +523,109 @@
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .darji-target-invoice-container {
-    max-width: 100%;
-    min-height: auto;
-    padding: 0 0 16px 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    margin: 0 auto !important;
+    padding: 0 0 16px 0 !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 8px !important;
+    box-sizing: border-box !important;
   }
   .target-invoice-wrapper {
-    padding: 0 16px;
+    padding: 0 10px !important;
+    gap: 12px !important;
+  }
+  .target-top-accent-bar {
+    margin-bottom: 12px !important;
   }
   .target-header-container {
     flex-direction: column;
     align-items: flex-start;
-    gap: 16px;
+    gap: 12px;
   }
   .target-header-brand-box {
     width: 100%;
+    gap: 10px;
+  }
+  .target-brand-logo-img, .target-brand-logo-circle {
+    width: 65px !important;
+    height: 65px !important;
+  }
+  .target-brand-title {
+    font-size: 22px !important;
+  }
+  .target-brand-tagline {
+    font-size: 11px !important;
+  }
+  .target-brand-address-box {
+    font-size: 10px !important;
   }
   .target-header-divider {
     display: none;
   }
   .target-header-inv-box {
     width: 100%;
-    padding-top: 16px;
-    border-top: 1px solid #E2E8F0;
+    padding-top: 10px;
+    border-top: 1px dashed #CBD5E1;
+  }
+  .target-inv-title {
+    font-size: 20px !important;
+  }
+  .target-cust-card {
+    padding: 10px !important;
+  }
+  .target-cust-field-grid {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
   }
   .target-summary-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  .target-totals-card {
+    width: 100% !important;
+  }
+  .target-notes-card {
+    width: 100% !important;
   }
   .target-footer-container {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 14px !important;
+  }
+  .target-thank-box {
+    align-items: center !important;
+    text-align: center !important;
   }
   .target-contact-col {
-    padding: 16px 0;
-    border-left: none;
-    border-right: none;
-    border-top: 1px solid #E2E8F0;
-    border-bottom: 1px solid #E2E8F0;
-    width: 100%;
+    padding: 10px 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-top: 1px solid #E2E8F0 !important;
+    border-bottom: 1px solid #E2E8F0 !important;
+    width: 100% !important;
+    align-items: center !important;
+  }
+  .target-sig-box {
+    align-items: center !important;
+    text-align: center !important;
   }
   .target-items-table {
-    font-size: 10px;
+    font-size: 10px !important;
+    width: 100% !important;
   }
   .target-items-table th, 
   .target-items-table td {
-    padding: 8px 6px;
+    padding: 6px 4px !important;
+    font-size: 10px !important;
   }
   .target-table-container {
     overflow-x: auto;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
   }
 }

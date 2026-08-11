@@ -233,9 +233,21 @@ export function generateReportPDFHTML(data: ReportPDFData): string {
       margin-bottom: 4px;
     }
 
+    @page {
+      size: A4 portrait;
+      margin: 10mm;
+    }
     @media print {
-      body { padding: 15px; }
-      .no-print { display: none; }
+      body { padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      .no-print { display: none !important; }
+    }
+    .report-header, .cards-grid, .section-title, tr, .footer {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .section-title {
+      page-break-after: avoid;
+      break-after: avoid;
     }
   </style>
 </head>
@@ -365,14 +377,71 @@ export function generateReportPDFHTML(data: ReportPDFData): string {
 
 export function printReportPDF(data: ReportPDFData) {
   const html = generateReportPDFHTML(data);
-  const win = window.open('', '_blank', 'width=1050,height=850');
-  if (win) {
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-    setTimeout(() => {
+
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.left = '-9999px';
+  iframe.style.top = '0';
+  iframe.style.width = '210mm';
+  iframe.style.height = '297mm';
+  iframe.style.border = 'none';
+  iframe.style.visibility = 'visible';
+  iframe.style.opacity = '0';
+  iframe.style.pointerEvents = 'none';
+  iframe.setAttribute('aria-hidden', 'true');
+
+  document.body.appendChild(iframe);
+
+  const win = iframe.contentWindow;
+  const doc = win?.document;
+  if (!doc || !win) return;
+
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  const triggerPrint = () => {
+    try {
+      win.focus();
       win.print();
-    }, 500);
+    } catch (e) {
+      console.warn('Print iframe error:', e);
+      window.print();
+    } finally {
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 1500);
+    }
+  };
+
+  const waitForAssetsAndPrint = () => {
+    const images = Array.from(doc.images);
+    const imgPromises = images.map(img => {
+      if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
+      return new Promise<void>(resolve => {
+        img.onload = () => resolve();
+        img.onerror = () => resolve();
+      });
+    });
+
+    const fontPromise = doc.fonts ? doc.fonts.ready.catch(() => {}) : Promise.resolve();
+
+    Promise.all([...imgPromises, fontPromise]).then(() => {
+      if (typeof win.requestAnimationFrame === 'function') {
+        win.requestAnimationFrame(() => {
+          setTimeout(triggerPrint, 150);
+        });
+      } else {
+        setTimeout(triggerPrint, 200);
+      }
+    });
+  };
+
+  if (doc.readyState === 'complete') {
+    waitForAssetsAndPrint();
+  } else {
+    iframe.onload = waitForAssetsAndPrint;
   }
 }

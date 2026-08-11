@@ -10,7 +10,7 @@ const pageTitles = {
   '/': 'Dashboard',
   '/customers': 'Customers',
   '/orders': 'Orders',
-  '/billing': 'Billing & Invoices',
+  '/billing': 'Billing',
   '/expenses': 'Expenses',
   '/reports': 'Reports & Analytics',
   '/query-ai': 'Query AI',

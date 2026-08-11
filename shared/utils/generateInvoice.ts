@@ -88,7 +88,7 @@ export function generateInvoiceHTML(data: InvoiceData): string {
       padding: 0;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
-    body {
+    html, body {
       background-color: #FFFFFF;
       color: #1E293B;
       width: 210mm;
@@ -101,8 +101,11 @@ export function generateInvoiceHTML(data: InvoiceData): string {
       padding: 0 0 16px 0;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
+      overflow: visible !important;
     }
-    .items-table tr, .cust-card, .summary-grid, .footer-container {
+    .items-table tr, .cust-card, .summary-grid, .footer-container,
+    .target-cust-card, .target-summary-grid, .target-footer-container,
+    .target-notes-card, .target-totals-card, .target-sig-box {
       page-break-inside: avoid;
       break-inside: avoid;
     }
@@ -732,33 +735,34 @@ export async function shareInvoicePDF(invoiceData: InvoiceData): Promise<void> {
 }
 
 // Failsafe Cross-Browser & Cross-Device (Desktop & Mobile) Print Trigger
-export function printInvoiceHTML(data: InvoiceData): void {
-  const htmlContent = generateInvoiceHTML(data);
-
-  // Create temporary hidden printing iframe
+// Helper utility to safely print HTML string using an off-screen, fully dimensioned iframe with preloaded assets
+function printIframeHTMLContent(htmlContent: string): void {
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.border = '0';
-  iframe.style.visibility = 'hidden';
+  iframe.style.left = '-9999px';
+  iframe.style.top = '0';
+  iframe.style.width = '210mm';
+  iframe.style.height = '297mm';
+  iframe.style.border = 'none';
+  iframe.style.visibility = 'visible';
+  iframe.style.opacity = '0';
+  iframe.style.pointerEvents = 'none';
+  iframe.setAttribute('aria-hidden', 'true');
 
   document.body.appendChild(iframe);
 
-  const doc = iframe.contentWindow?.document || iframe.contentDocument;
-  if (!doc) return;
+  const win = iframe.contentWindow;
+  const doc = win?.document;
+  if (!doc || !win) return;
 
   doc.open();
   doc.write(htmlContent);
   doc.close();
 
-  // Trigger print after iframe content loads
   const triggerPrint = () => {
     try {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
+      win.focus();
+      win.print();
     } catch (e) {
       console.warn('Iframe print fallback triggered:', e);
       window.print();
@@ -767,15 +771,44 @@ export function printInvoiceHTML(data: InvoiceData): void {
         if (document.body.contains(iframe)) {
           document.body.removeChild(iframe);
         }
-      }, 1000);
+      }, 1500);
     }
   };
 
-  if (iframe.contentWindow?.document.readyState === 'complete') {
-    setTimeout(triggerPrint, 250);
+  const waitForAssetsAndPrint = () => {
+    const images = Array.from(doc.images);
+    const imgPromises = images.map(img => {
+      if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
+      return new Promise<void>(resolve => {
+        img.onload = () => resolve();
+        img.onerror = () => resolve();
+      });
+    });
+
+    const fontPromise = doc.fonts ? doc.fonts.ready.catch(() => {}) : Promise.resolve();
+
+    Promise.all([...imgPromises, fontPromise]).then(() => {
+      if (typeof win.requestAnimationFrame === 'function') {
+        win.requestAnimationFrame(() => {
+          setTimeout(triggerPrint, 150);
+        });
+      } else {
+        setTimeout(triggerPrint, 200);
+      }
+    });
+  };
+
+  if (doc.readyState === 'complete') {
+    waitForAssetsAndPrint();
   } else {
-    iframe.onload = () => setTimeout(triggerPrint, 250);
+    iframe.onload = waitForAssetsAndPrint;
   }
+}
+
+// Failsafe Cross-Browser & Cross-Device (Desktop & Mobile) Print Trigger
+export function printInvoiceHTML(data: InvoiceData): void {
+  const htmlContent = generateInvoiceHTML(data);
+  printIframeHTMLContent(htmlContent);
 }
 
 // Generates 100% exact PDF base64 string from generateInvoiceHTML using browser renderer
@@ -783,23 +816,36 @@ export async function generateInvoicePDFBlob(data: InvoiceData): Promise<string>
   const htmlContent = generateInvoiceHTML(data);
   const container = document.createElement('div');
   container.style.position = 'fixed';
-  container.style.left = '0';
+  container.style.left = '-9999px';
   container.style.top = '0';
-  container.style.zIndex = '-9999';
-  container.style.opacity = '0.01';
-  container.style.pointerEvents = 'none';
   container.style.width = '210mm';
+  container.style.visibility = 'visible';
+  container.style.opacity = '1';
+  container.style.pointerEvents = 'none';
   container.innerHTML = htmlContent;
   document.body.appendChild(container);
 
   try {
+    const images = Array.from(container.querySelectorAll('img'));
+    await Promise.all(images.map(img => {
+      if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
+      return new Promise<void>(resolve => {
+        img.onload = () => resolve();
+        img.onerror = () => resolve();
+      });
+    }));
+
+    if (document.fonts) {
+      await document.fonts.ready.catch(() => {});
+    }
+
     const html2pdfModule = await import('html2pdf.js');
     const html2pdf = (html2pdfModule.default || html2pdfModule) as any;
     const opt = {
       margin: 0,
       filename: `Invoice_${data.invoiceNumber || '0001'}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
+      html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
     const pdfBase64 = await html2pdf().from(container).set(opt).output('datauristring');
@@ -856,18 +902,20 @@ export function printSalesReportHTML(data: SalesReportData): void {
   <title>Sales & Financial Report (${data.startDate} to ${data.endDate})</title>
   <style>
     @page { size: A4 portrait; margin: 12mm; }
-    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; color: #0F172A; padding: 16px; background: #FFFFFF; }
-    .report-header { display: flex; justify-content: space-between; border-bottom: 2px solid #0B1F3A; padding-bottom: 12px; margin-bottom: 20px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; color: #0F172A; padding: 16px; background: #FFFFFF; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    .report-header { display: flex; justify-content: space-between; border-bottom: 2px solid #0B1F3A; padding-bottom: 12px; margin-bottom: 20px; page-break-inside: avoid; break-inside: avoid; }
     .shop-title { font-size: 24px; font-weight: 900; color: #0B1F3A; text-transform: uppercase; letter-spacing: -0.5px; }
     .report-title { font-size: 18px; font-weight: 800; color: #D97706; text-align: right; letter-spacing: 0.5px; }
-    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; page-break-inside: avoid; break-inside: avoid; }
     .card { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px 16px; }
     .card-label { font-size: 10px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; }
     .card-val { font-size: 18px; font-weight: 800; color: #0B1F3A; margin-top: 4px; }
     table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 11px; }
+    tr { page-break-inside: avoid; break-inside: avoid; }
     th { background: #0B1F3A; color: white; text-align: left; padding: 8px 10px; font-size: 10px; font-weight: 800; text-transform: uppercase; }
     td { padding: 8px 10px; border-bottom: 1px dashed #CBD5E1; color: #334155; font-weight: 600; }
-    .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #64748B; border-top: 1px solid #E2E8F0; padding-top: 12px; font-weight: 600; }
+    .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #64748B; border-top: 1px solid #E2E8F0; padding-top: 12px; font-weight: 600; page-break-inside: avoid; break-inside: avoid; }
   </style>
 </head>
 <body>
@@ -910,7 +958,7 @@ export function printSalesReportHTML(data: SalesReportData): void {
   </div>
 
   ${data.ordersList && data.ordersList.length > 0 ? `
-  <h3 style="font-size: 13px; font-weight: 800; color: #0B1F3A; margin-bottom: 6px; text-transform: uppercase;">Orders Breakdown (${data.ordersList.length}):</h3>
+  <h3 style="font-size: 13px; font-weight: 800; color: #0B1F3A; margin-bottom: 6px; text-transform: uppercase; page-break-after: avoid; break-after: avoid;">Orders Breakdown (${data.ordersList.length}):</h3>
   <table>
     <thead>
       <tr>
@@ -943,42 +991,6 @@ export function printSalesReportHTML(data: SalesReportData): void {
 </body>
 </html>`;
 
-  const iframe = document.createElement('iframe');
-  iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.border = '0';
-  iframe.style.visibility = 'hidden';
-
-  document.body.appendChild(iframe);
-
-  const doc = iframe.contentWindow?.document || iframe.contentDocument;
-  if (!doc) return;
-
-  doc.open();
-  doc.write(html);
-  doc.close();
-
-  const triggerPrint = () => {
-    try {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-    } catch (e) {
-      console.warn('Print iframe error:', e);
-    }
-    setTimeout(() => {
-      if (document.body.contains(iframe)) {
-        document.body.removeChild(iframe);
-      }
-    }, 2000);
-  };
-
-  if (iframe.contentWindow?.document.readyState === 'complete') {
-    setTimeout(triggerPrint, 250);
-  } else {
-    iframe.onload = () => setTimeout(triggerPrint, 250);
-  }
+  printIframeHTMLContent(html);
 }
 

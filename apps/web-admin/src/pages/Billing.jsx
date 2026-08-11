@@ -143,13 +143,13 @@ export default function Billing() {
     <div className="billing">
       <div className="billing__header">
         <div>
-          <h2>{t('billingHeading', 'Invoices & GST Billing')}</h2>
-          <p>{t('billingSubheading', 'Indian GST compliant invoices, automatic round-off, sequential numbering & WhatsApp sharing')}</p>
+          <h2>{t('billingHeading', 'Billing')}</h2>
+          <p className="billing__subheading-text">{t('billingSubheading', 'Digital invoices & WhatsApp sharing')}</p>
         </div>
       </div>
 
       <div className="billing__container">
-        <div className="billing__orders-panel">
+        <div className={`billing__orders-panel ${selectedInvoiceOrder ? 'billing__orders-panel--hidden-mobile' : ''}`}>
           <div className="billing__search">
             <Search size={16} className="billing__search-icon" />
             <input
@@ -188,32 +188,27 @@ export default function Billing() {
             <div className="billing__empty-state">
               <FileText size={48} />
               <h3>{t('selectOrderTitle', 'Select an Order to Generate Invoice')}</h3>
-              <p>{t('selectOrderSub', 'Choose an order from the left list to calculate GST, discounts, and print or share the invoice PDF.')}</p>
+              <p>{t('selectOrderSub', 'Choose an order from the list to calculate discounts, and print or share the invoice PDF.')}</p>
             </div>
           ) : (
             <div className="billing__invoice-card animate-fade-in">
+              {/* Mobile Back Button */}
+              <button
+                type="button"
+                className="billing__mobile-back-btn"
+                onClick={() => setSelectedInvoiceOrder(null)}
+              >
+                ← {t('backToOrders', 'Select Different Order')}
+              </button>
+
               <div className="billing__actions-bar">
                 <div className="billing__actions-left">
                   <span className="billing__inv-num">{activeInvoice.invoiceNumber}</span>
                   <span className="billing__token-pill"><Tag size={12} /> Token #{activeInvoice.tokenNumber}</span>
                 </div>
                 <div className="billing__actions-right">
-                  {activeInvoice.remaining > 0 && (
-                    <button
-                      className="billing__action-btn"
-                      style={{ background: '#16a34a', color: '#fff', borderColor: '#16a34a' }}
-                      onClick={() => {
-                        if (activeInvoice.orderId) {
-                          markOrderPaid(activeInvoice.orderId);
-                          apiClient.markOrderAsPaid(activeInvoice.orderId).catch(() => {});
-                          setActiveInvoice(prev => prev ? ({ ...prev, paid: prev.grandTotal, remaining: 0, paymentStatus: 'paid' }) : null);
-                        }
-                      }}
-                    >
-                      <CheckCircle size={14} /> Mark as Paid
-                    </button>
-                  )}
                   <button
+                    type="button"
                     className="billing__action-btn"
                     onClick={() => {
                       if (activeInvoiceData) {
@@ -221,12 +216,13 @@ export default function Billing() {
                       }
                     }}
                   >
-                    <Printer size={14} /> {t('printPdfBtn', 'Print PDF')}
+                    <Printer size={13} /> {t('printPdfBtn', 'Print / Save PDF')}
                   </button>
+
                   <button
+                    type="button"
                     className="billing__action-btn billing__action-btn--whatsapp"
                     disabled={isSendingPdf}
-
                     onClick={async () => {
                       if (!activeInvoice) return;
                       setIsSendingPdf(true);
@@ -240,7 +236,6 @@ export default function Billing() {
                         }
                         const payloadData = activeInvoiceData || activeInvoice;
 
-                        // Async instant response - backend vector PDFKit engine generates 40KB PDF in 50ms
                         setPdfMsg({ success: true, text: `🚀 Sending PDF Invoice to +91 ${targetMobile}...` });
                         setShowThankYouModal(true);
 
@@ -259,8 +254,46 @@ export default function Billing() {
                       }
                     }}
                   >
-                    <Share2 size={16} /> {isSendingPdf ? 'Sending PDF...' : '📄 Send PDF Bill via WhatsApp'}
+                    <Share2 size={13} /> {isSendingPdf ? 'Sending...' : 'Send WhatsApp PDF'}
                   </button>
+
+                  {activeInvoice.remaining > 0 && (
+                    <button
+                      type="button"
+                      className="billing__action-btn billing__action-btn--paid"
+                      onClick={() => {
+                        if (activeInvoice.orderId) {
+                          markOrderPaid(activeInvoice.orderId);
+                          apiClient.markOrderAsPaid(activeInvoice.orderId).catch(() => {});
+                          setActiveInvoice(prev => prev ? ({ ...prev, paid: prev.grandTotal, remaining: 0, paymentStatus: 'paid' }) : null);
+                        }
+                      }}
+                    >
+                      <CheckCircle size={13} /> Mark Paid
+                    </button>
+                  )}
+
+                  {activeInvoice.remaining > 0 && (
+                    <button
+                      type="button"
+                      className="billing__action-btn billing__action-btn--reminder"
+                      onClick={async () => {
+                        const targetMobile = activeInvoice.customer.mobile || activeInvoice.customer.phone || '';
+                        if (!targetMobile) {
+                          setPdfMsg({ success: false, text: '❌ Customer mobile missing!' });
+                          return;
+                        }
+                        try {
+                          setPdfMsg({ success: true, text: `🔔 Sending payment reminder to ${targetMobile}...` });
+                          await apiClient.sendPaymentReminderWhatsApp({ orderId: activeInvoice.orderNumber, mobile: targetMobile }).catch(() => {});
+                        } catch (e) {
+                          console.warn('Reminder error:', e);
+                        }
+                      }}
+                    >
+                      <Clock size={13} /> WA Reminder
+                    </button>
+                  )}
                 </div>
               </div>
 
