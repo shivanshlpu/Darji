@@ -639,6 +639,11 @@ export default function Orders() {
 
     addOrder(newOrder);
 
+    // Reset filters & search so newly created order is immediately visible in view
+    setSearch('');
+    setStatusFilter('all');
+    setPaymentFilter('all');
+
     // Calculate expected delivery days & date for order register
     const itemsSummaryList = finalOrderItems.map(it => `${it.qty}x ${it.name}`).join(', ');
     const deliveryDateObj = deliveryDate ? new Date(deliveryDate) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -654,12 +659,7 @@ export default function Orders() {
     }
     bookingText += `\n\nThank you for choosing *${sName}*!`;
 
-    // 1. Save permanently to MongoDB Atlas
-    apiClient.createOrder(newOrder)
-      .then(() => fetchOrdersFromDB())
-      .catch((err) => console.warn('[Create Order DB Sync Warning]:', err.message));
-
-    // 2. Dispatch WhatsApp registration notification directly to customer mobile number
+    // Dispatch WhatsApp registration notification directly to customer mobile number
     if (custMobile) {
       apiClient.sendWhatsAppTest({ mobile: custMobile, text: bookingText })
         .then(() => {

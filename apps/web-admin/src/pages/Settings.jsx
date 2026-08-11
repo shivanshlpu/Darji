@@ -35,41 +35,7 @@ export default function SettingsPage() {
   const [clearSuccessMsg, setClearSuccessMsg] = useState(null);
   const [clearErrorMsg, setClearErrorMsg] = useState(null);
 
-  // Cloud Backup State
-  const [isBackingUp, setIsBackingUp] = useState(false);
-  const [lastBackupText, setLastBackupText] = useState('Today at 01:00 AM');
-  const [backupResultMsg, setBackupResultMsg] = useState(null);
 
-  const handleTriggerCloudBackup = async () => {
-    setIsBackingUp(true);
-    setBackupResultMsg(null);
-    try {
-      const res = await apiClient.triggerCloudBackup();
-      if (res.success && res.backup) {
-        const timeStr = res.timestamp || new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-        setLastBackupText(`Today at ${timeStr}`);
-        
-        // Auto-download JSON backup file to user's device
-        const blob = new Blob([JSON.stringify(res.backup, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `darji-erp-backup-${new Date().toISOString().slice(0, 10)}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        setBackupResultMsg('✅ Encrypted database backup created, synced to MongoDB Atlas, and downloaded!');
-      } else {
-        setBackupResultMsg('✅ Cloud backup triggered successfully!');
-      }
-    } catch (err) {
-      setBackupResultMsg(`⚠️ Cloud Backup Error: ${err.message}`);
-    } finally {
-      setIsBackingUp(false);
-    }
-  };
 
   const handleClearAppEntryData = async () => {
     const confirmMessage = language === 'hi'
@@ -291,7 +257,6 @@ export default function SettingsPage() {
             <option value="shop">🏬 {t('shopProfileTab', 'Shop Profile & Branding')}</option>
             <option value="invoice">📄 {t('invoiceGstTab', 'Invoice & GST Config')}</option>
             <option value="whatsapp">💬 {t('whatsappTab', 'WhatsApp Integration')}</option>
-            <option value="backup">💾 {t('offlineBackupTab', 'Offline & Backup')}</option>
             <option value="security">🛡️ {language === 'hi' ? 'सुरक्षा व पासवर्ड' : 'Security & Password'}</option>
             <option value="pwa">📱 {language === 'hi' ? 'ऐप इंस्टॉल करें' : 'App Installation'}</option>
             <option value="reset">🗑️ {language === 'hi' ? 'डेटा साफ़ करें' : 'Clear App Data'}</option>
@@ -308,9 +273,6 @@ export default function SettingsPage() {
           </button>
           <button className={`settings__tab ${activeTab === 'whatsapp' ? 'active' : ''}`} onClick={() => setActiveTab('whatsapp')}>
             <MessageSquare size={18} /> {t('whatsappTab', 'WhatsApp Integration')}
-          </button>
-          <button className={`settings__tab ${activeTab === 'backup' ? 'active' : ''}`} onClick={() => setActiveTab('backup')}>
-            <Database size={18} /> {t('offlineBackupTab', 'Offline & Backup')}
           </button>
           <button className={`settings__tab ${activeTab === 'security' ? 'active' : ''}`} onClick={() => setActiveTab('security')}>
             <Shield size={18} /> {language === 'hi' ? 'सुरक्षा व पासवर्ड' : 'Security & Password'}
@@ -705,39 +667,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {activeTab === 'backup' && (
-            <div className="settings__card animate-fade-in">
-              <h3>Offline Mirror & Cloud Backup</h3>
-              <p className="settings__hint">Section 9 & 12.7 compliant: Local SQLite database encrypted with SQLCipher & daily cloud sync.</p>
 
-              <div className="settings__backup-grid">
-                <div className="settings__backup-box">
-                  <h4>Local SQLite Mirror</h4>
-                  <p>5,000+ orders stored locally</p>
-                  <span className="settings__badge-success">🟢 SQLite Sync Active</span>
-                </div>
-
-                <div className="settings__backup-box">
-                  <h4>Cloud Backup</h4>
-                  <p>Last full backup: <strong>{lastBackupText}</strong></p>
-                  <button
-                    className="modal__btn modal__btn--secondary"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-                    disabled={isBackingUp}
-                    onClick={handleTriggerCloudBackup}
-                  >
-                    <RefreshCw size={14} className={isBackingUp ? 'animate-spin' : ''} />
-                    {isBackingUp ? 'Backing Up...' : 'Backup Now'}
-                  </button>
-                  {backupResultMsg && (
-                    <p style={{ marginTop: '8px', fontSize: '12px', color: backupResultMsg.startsWith('⚠️') ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
-                      {backupResultMsg}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
 
           {activeTab === 'security' && (
             <form onSubmit={handlePasswordUpdate} className="settings__card animate-fade-in">
