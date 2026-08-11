@@ -248,11 +248,17 @@ function buildInvoiceHTML(order = {}, shopInfo = {}) {
 
     ${(() => {
       const rawTerms = shopInfo.termsAndConditions || shopInfo.terms;
-      const termsList = Array.isArray(rawTerms)
+      let termsList = Array.isArray(rawTerms) && rawTerms.length > 0
         ? rawTerms
-        : (typeof rawTerms === 'string' ? rawTerms.split('\n').filter(t => t.trim()) : []);
+        : (typeof rawTerms === 'string' && rawTerms.trim() ? rawTerms.split('\n').filter(t => t.trim()) : []);
 
-      if (termsList.length === 0) return '';
+      if (termsList.length === 0) {
+        termsList = [
+          '1. Garments not collected within 30 days are not the responsibility of the shop.',
+          '2. Alterations are accepted within 7 days of delivery upon presentation of the original bill.',
+          '3. Any disputes are subject to local jurisdiction only.',
+        ];
+      }
 
       return `
       <!-- Terms & Conditions Section -->
@@ -512,9 +518,9 @@ const generateInvoicePDFKit = async (order, shopInfo = {}) => {
       cx += colWidths.desc;
       doc.text('QTY', cx, y + 10, { width: colWidths.qty, align: 'center' });
       cx += colWidths.qty;
-      doc.text('UNIT PRICE (\u20B9)', cx, y + 10, { width: colWidths.price, align: 'center' });
+      doc.text('UNIT PRICE (Rs.)', cx, y + 10, { width: colWidths.price, align: 'center' });
       cx += colWidths.price;
-      doc.text('TOTAL PRICE (\u20B9)', cx, y + 10, { width: colWidths.total, align: 'center' });
+      doc.text('TOTAL PRICE (Rs.)', cx, y + 10, { width: colWidths.total, align: 'center' });
 
       y += headerH;
 
@@ -561,13 +567,20 @@ const generateInvoicePDFKit = async (order, shopInfo = {}) => {
       // ══════════════════════════════════════════════════
       y += 14;
 
-      // Notes card
+      // Calculate totals rows & height dynamically
+      let totRowsCount = 2; // Subtotal + Grand Total
+      if (discount > 0) totRowsCount++;
+      if (extraCharges > 0) totRowsCount++;
+      const totRowH = 22;
+      const totalsCardH = Math.max(75, totRowsCount * totRowH + 6);
       const notesW = 230;
-      const notesH = 75;
+      const notesH = totalsCardH;
+
+      // Notes card
       doc.roundedRect(marginL, y, notesW, notesH, 8).strokeColor(borderColor).lineWidth(1).stroke();
       doc.fontSize(9).font('Helvetica-Bold').fillColor(gold).text('NOTES', marginL + 16, y + 12);
       const notesText = discount > 0
-        ? `DISCOUNT APPLIED: \u20B9 ${fmt(discount)}`
+        ? `DISCOUNT APPLIED: Rs. ${fmt(discount)}`
         : 'GARMENTS NOT COLLECTED WITHIN 30 DAYS ARE NOT THE SHOP RESPONSIBILITY.';
       doc.fontSize(9).font('Helvetica').fillColor('#334155').text(notesText, marginL + 16, y + 28, { width: notesW - 32 });
 
@@ -575,33 +588,81 @@ const generateInvoicePDFKit = async (order, shopInfo = {}) => {
       const totX = marginL + notesW + 18;
       const totW = contentW - notesW - 18;
       let totY = y;
-      const totRowH = 22;
 
-      doc.roundedRect(totX, totY, totW, notesH, 8).strokeColor(borderColor).lineWidth(1).stroke();
+      doc.roundedRect(totX, totY, totW, totalsCardH, 8).strokeColor(borderColor).lineWidth(1).stroke();
 
-      // Total Amount
-      doc.fontSize(10).font('Helvetica-Bold').fillColor(darkText).text('Total Amount', totX + 12, totY + 8);
-      doc.text(`\u20B9 ${fmt(subtotal)}`, totX + totW - 120, totY + 8, { width: 108, align: 'right' });
+      // Subtotal (Total Amount)
+      doc.fontSize(10).font('Helvetica-Bold').fillColor(darkText).text('Total Amount', totX + 12, totY + 7);
+      doc.text(`Rs. ${fmt(subtotal)}`, totX + totW - 120, totY + 7, { width: 108, align: 'right' });
       totY += totRowH;
 
-      // Discount
-      doc.moveTo(totX + 8, totY).lineTo(totX + totW - 8, totY).strokeColor(borderColor).lineWidth(0.5).stroke();
-      doc.fontSize(10).font('Helvetica').fillColor(darkText).text('Discount', totX + 12, totY + 4);
-      doc.text(`- \u20B9 ${fmt(discount)}`, totX + totW - 120, totY + 4, { width: 108, align: 'right' });
-      totY += totRowH;
+      // Discount (Only rendered if > 0)
+      if (discount > 0) {
+        doc.moveTo(totX + 8, totY).lineTo(totX + totW - 8, totY).strokeColor(borderColor).lineWidth(0.5).stroke();
+        doc.fontSize(10).font('Helvetica').fillColor(darkText).text('Discount', totX + 12, totY + 4);
+        doc.text(`- Rs. ${fmt(discount)}`, totX + totW - 120, totY + 4, { width: 108, align: 'right' });
+        totY += totRowH;
+      }
+
+      // Extra Charges (Only rendered if > 0)
+      if (extraCharges > 0) {
+        doc.moveTo(totX + 8, totY).lineTo(totX + totW - 8, totY).strokeColor(borderColor).lineWidth(0.5).stroke();
+        doc.fontSize(10).font('Helvetica').fillColor(darkText).text('Extra Charges', totX + 12, totY + 4);
+        doc.text(`+ Rs. ${fmt(extraCharges)}`, totX + totW - 120, totY + 4, { width: 108, align: 'right' });
+        totY += totRowH;
+      }
 
       // Grand Total (gold bar)
       doc.rect(totX + 1, totY, totW - 2, totRowH + 4).fill(gold);
       doc.fontSize(11).font('Helvetica-Bold').fillColor('#000000').text('GRAND TOTAL', totX + 12, totY + 6);
-      doc.text(`\u20B9 ${fmt(grandTotal)}`, totX + totW - 120, totY + 6, { width: 108, align: 'right' });
+      doc.text(`Rs. ${fmt(grandTotal)}`, totX + totW - 120, totY + 6, { width: 108, align: 'right' });
+
+      y += totalsCardH + 12;
+
+      // ══════════════════════════════════════════════════
+      //  RATING LINK / GOOGLE REVIEW BANNER
+      // ══════════════════════════════════════════════════
+      const reviewUrl = shopInfo.reviewLink || 'https://g.page/r/darji-tailors';
+      doc.roundedRect(marginL, y, contentW, 36, 6).fill('#F8FAFC');
+      doc.roundedRect(marginL, y, contentW, 36, 6).strokeColor(borderColor).lineWidth(0.8).stroke();
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#D97706').text('* RATE YOUR EXPERIENCE ON GOOGLE', marginL + 12, y + 6);
+      doc.fontSize(8.5).font('Helvetica').fillColor(navy).text(`Scan QR / Visit link to leave us a 5-Star Review:  ${reviewUrl}`, marginL + 12, y + 20);
+
+      y += 44;
+
+      // ══════════════════════════════════════════════════
+      //  TERMS & CONDITIONS BLOCK
+      // ══════════════════════════════════════════════════
+      const rawTermsPdf = shopInfo.termsAndConditions || shopInfo.terms;
+      let termsListPdf = Array.isArray(rawTermsPdf) && rawTermsPdf.length > 0
+        ? rawTermsPdf
+        : (typeof rawTermsPdf === 'string' && rawTermsPdf.trim() ? rawTermsPdf.split('\n').filter(t => t.trim()) : []);
+
+      if (termsListPdf.length === 0) {
+        termsListPdf = [
+          '1. Garments not collected within 30 days are not the responsibility of the shop.',
+          '2. Alterations are accepted within 7 days of delivery upon presentation of the original bill.',
+          '3. Any disputes are subject to local jurisdiction only.',
+        ];
+      }
+
+      const termsH = 16 + termsListPdf.length * 11;
+      doc.roundedRect(marginL, y, contentW, termsH, 6).fill('#F8FAFC');
+      doc.roundedRect(marginL, y, contentW, termsH, 6).strokeColor(borderColor).lineWidth(0.8).stroke();
+      doc.fontSize(8.5).font('Helvetica-Bold').fillColor(navy).text('TERMS & CONDITIONS', marginL + 12, y + 5);
+      doc.fontSize(7.5).font('Helvetica').fillColor(lightText);
+      let termY = y + 16;
+      termsListPdf.forEach(t => {
+        doc.text(`* ${t}`, marginL + 12, termY, { width: contentW - 24 });
+        termY += 11;
+      });
+
+      y += termsH + 16;
 
       // ══════════════════════════════════════════════════
       //  FOOTER: Thank You + Contact + Signature
       // ══════════════════════════════════════════════════
-      y += notesH + 24;
-
       // ── Heart + "Thank You" ──
-      // Draw a small heart shape
       const heartX = marginL + 2;
       const heartY = y + 4;
       doc.save();
@@ -645,7 +706,6 @@ const generateInvoicePDFKit = async (order, shopInfo = {}) => {
       }
 
       if (!hasSigImg) {
-        // Draw signature curve (matching the SVG signature style)
         doc.save();
         doc.strokeColor(navy).lineWidth(2).lineCap('round');
         doc.moveTo(sigX + 10, y + 12)

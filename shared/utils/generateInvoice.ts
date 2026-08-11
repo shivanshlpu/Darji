@@ -652,11 +652,17 @@ export function generateInvoiceHTML(data: InvoiceData): string {
 
     ${(() => {
       const rawTerms = data.termsAndConditions || data.terms;
-      const termsList = Array.isArray(rawTerms)
+      let termsList = Array.isArray(rawTerms) && rawTerms.length > 0
         ? rawTerms
-        : (typeof rawTerms === 'string' ? rawTerms.split('\n').filter(t => t.trim()) : []);
+        : (typeof rawTerms === 'string' && rawTerms.trim() ? rawTerms.split('\n').filter(t => t.trim()) : []);
 
-      if (termsList.length === 0) return '';
+      if (termsList.length === 0) {
+        termsList = [
+          '1. Garments not collected within 30 days are not the responsibility of the shop.',
+          '2. Alterations are accepted within 7 days of delivery upon presentation of the original bill.',
+          '3. Any disputes are subject to local jurisdiction only.',
+        ];
+      }
 
       return `
       <!-- Terms & Conditions Section -->
