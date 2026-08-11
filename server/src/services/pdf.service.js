@@ -1,5 +1,20 @@
 import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import PDFDocument from 'pdfkit';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const dancingScriptPath = path.join(__dirname, 'DancingScript.ttf');
+let dancingScriptBase64 = '';
+if (fs.existsSync(dancingScriptPath)) {
+  try {
+    dancingScriptBase64 = fs.readFileSync(dancingScriptPath).toString('base64');
+  } catch (e) {
+    console.warn('[PDF Service] DancingScript read error:', e.message);
+  }
+}
 
 /**
  * Finds systemic Chrome or Edge browser executable path on host OS
@@ -81,6 +96,14 @@ function buildInvoiceHTML(order = {}, shopInfo = {}) {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
+    ${dancingScriptBase64 ? `
+    @font-face {
+      font-family: 'Dancing Script';
+      font-style: normal;
+      font-weight: 700;
+      src: url('data:font/ttf;charset=utf-8;base64,${dancingScriptBase64}') format('truetype');
+    }
+    ` : ''}
     @page { size: A4 portrait; margin: 0; }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
     body { background-color: #FFFFFF; color: #1E293B; width: 210mm; min-height: 297mm; height: auto; margin: 0 auto; position: relative; display: flex; flex-direction: column; padding-bottom: 16px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -135,8 +158,11 @@ function buildInvoiceHTML(order = {}, shopInfo = {}) {
     .tot-row-grand { background: #F59E0B; border-bottom: none; padding: 12px 16px; font-size: 14px; font-weight: 900; color: #000000; text-transform: uppercase; }
 
     .footer-container { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding: 0 4px; }
-    .thank-script { font-family: 'Dancing Script', cursive; font-size: 26px; font-weight: 700; color: #0B1F3A; }
-    .thank-sub { font-size: 11px; font-weight: 600; color: #475569; }
+    .thank-box { display: flex; flex-direction: column; align-items: flex-start; }
+    .thank-title-row { display: flex; align-items: center; gap: 8px; }
+    .heart-icon { width: 18px; height: 18px; fill: #F59E0B; flex-shrink: 0; }
+    .thank-script { font-family: 'Dancing Script', 'Caveat', cursive; font-size: 28px; font-weight: 700; color: #0B1F3A; line-height: 1; }
+    .thank-sub { font-size: 11px; font-weight: 600; color: #475569; margin-top: 4px; }
 
     .contact-col { display: flex; flex-direction: column; gap: 6px; padding: 0 24px; border-left: 1px solid #E2E8F0; border-right: 1px solid #E2E8F0; font-size: 11px; font-weight: 600; color: #334155; }
 
@@ -286,9 +312,12 @@ function buildInvoiceHTML(order = {}, shopInfo = {}) {
     })()}
 
     <div class="footer-container">
-      <div>
-        <div class="thank-script">Thank You</div>
-        <div class="thank-sub">For Your Business!</div>
+      <div class="thank-box">
+        <div class="thank-title-row">
+          <svg class="heart-icon" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          <span class="thank-script">Thank You</span>
+        </div>
+        <span class="thank-sub">For Your Business!</span>
       </div>
       <div class="contact-col">
         <div>📞 ${shopPhone}</div>
@@ -706,8 +735,8 @@ const generateInvoicePDFKit = async (order, shopInfo = {}) => {
       //  FOOTER: Thank You + Contact + Signature
       // ══════════════════════════════════════════════════
       // ── Heart + "Thank You" ──
-      const heartX = marginL + 2;
-      const heartY = y + 4;
+      const heartX = marginL;
+      const heartY = y + 6;
       doc.save();
       doc.fillColor(gold);
       doc.moveTo(heartX, heartY + 4)
@@ -718,7 +747,15 @@ const generateInvoicePDFKit = async (order, shopInfo = {}) => {
         .fill();
       doc.restore();
 
-      doc.fontSize(22).font('Helvetica-Bold').fillColor(navy).text('Thank You', marginL + 22, y);
+      if (fs.existsSync(dancingScriptPath)) {
+        try {
+          doc.font(dancingScriptPath).fontSize(26).fillColor(navy).text('Thank You', marginL + 20, y);
+        } catch (e) {
+          doc.fontSize(22).font('Helvetica-Bold').fillColor(navy).text('Thank You', marginL + 20, y);
+        }
+      } else {
+        doc.fontSize(22).font('Helvetica-Bold').fillColor(navy).text('Thank You', marginL + 20, y);
+      }
       doc.fontSize(10).font('Helvetica').fillColor(lightText).text('For Your Business!', marginL, y + 28);
 
       // ── Contact Info (center column with left border) ──
