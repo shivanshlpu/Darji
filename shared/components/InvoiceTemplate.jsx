@@ -172,26 +172,43 @@ export const InvoiceTemplate = ({ invoice }) => {
         </div>
 
         {/* ⭐ Google Review QR & Link Banner (If Present) */}
-        {(invoice.reviewLink || invoice.reviewQrUrl) && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '10px 16px', margin: '12px 0 4px 0' }}>
-            {(invoice.reviewQrUrl || invoice.reviewLink) && (
-              <img
-                src={invoice.reviewQrUrl || `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(invoice.reviewLink)}`}
-                alt="Google Review QR"
-                style={{ width: '64px', height: '64px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFFFFF', padding: '2px' }}
-              />
-            )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span style={{ fontSize: '11px', fontWeight: 800, color: '#D97706', letterSpacing: '0.3px' }}>⭐ RATE YOUR EXPERIENCE ON GOOGLE</span>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#0B1F3A' }}>Scan QR Code or visit link to leave us a 5-Star Review!</span>
-              {invoice.reviewLink && (
-                <a href={invoice.reviewLink} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: '#2563EB', fontWeight: 600, wordBreak: 'break-all', textDecoration: 'underline' }}>
-                  {invoice.reviewLink}
-                </a>
+        {(() => {
+          const rawUrl = invoice.reviewLink || '';
+          const linkUrl = rawUrl.trim() ? (/^https?:\/\//i.test(rawUrl.trim()) ? rawUrl.trim() : `https://${rawUrl.trim()}`) : '';
+          const qrSrc = invoice.reviewQrUrl || (linkUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(linkUrl)}` : null);
+
+          if (!linkUrl && !qrSrc) return null;
+
+          const banner = (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '10px 16px', margin: '12px 0 4px 0', textDecoration: 'none' }}>
+              {qrSrc && (
+                <img
+                  src={qrSrc}
+                  alt="Google Review QR"
+                  style={{ width: '64px', height: '64px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFFFFF', padding: '2px', flexShrink: 0 }}
+                />
               )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#D97706', letterSpacing: '0.3px' }}>⭐ RATE YOUR EXPERIENCE ON GOOGLE</span>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#0B1F3A' }}>Scan QR Code or tap to leave us a 5-Star Review!</span>
+                {linkUrl && (
+                  <span style={{ fontSize: '11px', color: '#2563EB', fontWeight: 600, wordBreak: 'break-all', textDecoration: 'underline' }}>
+                    {linkUrl}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+
+          if (linkUrl) {
+            return (
+              <a href={linkUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+                {banner}
+              </a>
+            );
+          }
+          return banner;
+        })()}
 
         {/* ⭐ Terms & Conditions Banner */}
         {(() => {

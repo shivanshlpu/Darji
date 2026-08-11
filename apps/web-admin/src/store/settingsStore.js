@@ -148,6 +148,9 @@ const useSettingsStore = create((set, get) => ({
         ? shopInfo.phoneNumbers.filter(Boolean)
         : (shopInfo.phone ? shopInfo.phone.split(',').map(p => p.trim()).filter(Boolean) : []);
 
+      const rawReview = (shopInfo.reviewLink || '').trim();
+      const reviewLink = rawReview ? (/^https?:\/\//i.test(rawReview) ? rawReview : `https://${rawReview}`) : '';
+
       const payload = {
         name: shopInfo.name,
         phone: phoneNumbers.join(', ') || shopInfo.phone,
@@ -158,7 +161,7 @@ const useSettingsStore = create((set, get) => ({
         currency: shopInfo.currency,
         logoUrl: shopInfo.logoUrl,
         signatureUrl: shopInfo.signatureUrl,
-        reviewLink: shopInfo.reviewLink,
+        reviewLink,
         reviewQrUrl: shopInfo.reviewQrUrl,
         termsAndConditions: termsArray,
         invoiceSettings,

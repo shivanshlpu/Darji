@@ -172,13 +172,29 @@ export default function SettingsPage() {
 
   const handleReviewQrUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      try {
-        const compressedDataUrl = await compressImage(file, 200, 200, 0.75);
+    if (!file) return;
+    try {
+      if (file.type && file.type.startsWith('image/')) {
+        const compressedDataUrl = await compressImage(file, 300, 300, 0.85);
         updateReviewQr(compressedDataUrl);
-      } catch (err) {
-        console.error('Review QR compression error:', err);
+      } else {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          if (evt.target?.result) {
+            updateReviewQr(evt.target.result);
+          }
+        };
+        reader.readAsDataURL(file);
       }
+    } catch (err) {
+      console.error('Review QR compression error:', err);
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        if (evt.target?.result) {
+          updateReviewQr(evt.target.result);
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -458,7 +474,7 @@ export default function SettingsPage() {
                     ) : (
                       <label className="modal__btn modal__btn--secondary upload-btn" style={{ width: 'fit-content', cursor: 'pointer' }}>
                         <Upload size={14} /> Upload Review QR Code Image
-                        <input type="file" accept="image/*" onChange={handleReviewQrUpload} hidden />
+                        <input type="file" accept="image/*,.pdf" onChange={handleReviewQrUpload} hidden />
                       </label>
                     )}
                   </div>

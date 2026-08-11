@@ -234,17 +234,29 @@ function buildInvoiceHTML(order = {}, shopInfo = {}) {
       </div>
     </div>
 
-    ${(shopInfo.reviewLink || shopInfo.reviewQrUrl) ? `
-    <!-- ⭐ Google Review QR Banner -->
-    <div style="display: flex; align-items: center; gap: 16px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 10px 16px; margin: 12px 0 4px 0;">
-      <img src="${shopInfo.reviewQrUrl || `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(shopInfo.reviewLink || '')}`}" alt="Google Review QR" style="width: 64px; height: 64px; object-fit: contain; border-radius: 6px; border: 1px solid #CBD5E1; background: #FFFFFF; padding: 2px;" />
-      <div style="display: flex; flex-direction: column; gap: 2px;">
-        <span style="font-size: 11px; font-weight: 800; color: #D97706; letter-spacing: 0.3px;">⭐ RATE YOUR EXPERIENCE ON GOOGLE</span>
-        <span style="font-size: 12px; font-weight: 700; color: #0B1F3A;">Scan QR Code or visit link to leave us a 5-Star Review!</span>
-        ${shopInfo.reviewLink ? `<a href="${shopInfo.reviewLink}" target="_blank" style="font-size: 11px; color: #2563EB; font-weight: 600; word-break: break-all; text-decoration: underline;">${shopInfo.reviewLink}</a>` : ''}
-      </div>
-    </div>
-    ` : ''}
+    ${(() => {
+      const rawUrl = shopInfo.reviewLink || '';
+      const linkUrl = rawUrl.trim() ? (/^https?:\/\//i.test(rawUrl.trim()) ? rawUrl.trim() : `https://${rawUrl.trim()}`) : '';
+      const qrSrc = shopInfo.reviewQrUrl || (linkUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(linkUrl)}` : null);
+
+      if (!linkUrl && !qrSrc) return '';
+
+      const bannerContent = `
+        <div style="display: flex; align-items: center; gap: 16px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 10px 16px; margin: 12px 0 4px 0; text-decoration: none;">
+          ${qrSrc ? `<img src="${qrSrc}" alt="Google Review QR" style="width: 64px; height: 64px; object-fit: contain; border-radius: 6px; border: 1px solid #CBD5E1; background: #FFFFFF; padding: 2px; flex-shrink: 0;" />` : ''}
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 11px; font-weight: 800; color: #D97706; letter-spacing: 0.3px;">⭐ RATE YOUR EXPERIENCE ON GOOGLE</span>
+            <span style="font-size: 12px; font-weight: 700; color: #0B1F3A;">Scan QR Code or tap to leave us a 5-Star Review!</span>
+            ${linkUrl ? `<span style="font-size: 11px; color: #2563EB; font-weight: 600; word-break: break-all; text-decoration: underline;">${linkUrl}</span>` : ''}
+          </div>
+        </div>
+      `;
+
+      if (linkUrl) {
+        return `<a href="${linkUrl}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; color: inherit; display: block; page-break-inside: avoid; break-inside: avoid;">${bannerContent}</a>`;
+      }
+      return `<div style="page-break-inside: avoid; break-inside: avoid;">${bannerContent}</div>`;
+    })()}
 
     ${(() => {
       const rawTerms = shopInfo.termsAndConditions || shopInfo.terms;
@@ -622,13 +634,44 @@ const generateInvoicePDFKit = async (order, shopInfo = {}) => {
       // ══════════════════════════════════════════════════
       //  RATING LINK / GOOGLE REVIEW BANNER
       // ══════════════════════════════════════════════════
-      const reviewUrl = shopInfo.reviewLink || 'https://g.page/r/darji-tailors';
-      doc.roundedRect(marginL, y, contentW, 36, 6).fill('#F8FAFC');
-      doc.roundedRect(marginL, y, contentW, 36, 6).strokeColor(borderColor).lineWidth(0.8).stroke();
-      doc.fontSize(9).font('Helvetica-Bold').fillColor('#D97706').text('* RATE YOUR EXPERIENCE ON GOOGLE', marginL + 12, y + 6);
-      doc.fontSize(8.5).font('Helvetica').fillColor(navy).text(`Scan QR / Visit link to leave us a 5-Star Review:  ${reviewUrl}`, marginL + 12, y + 20);
+      const rawReviewUrl = shopInfo.reviewLink || '';
+      const reviewUrl = rawReviewUrl.trim() ? (/^https?:\/\//i.test(rawReviewUrl.trim()) ? rawReviewUrl.trim() : `https://${rawReviewUrl.trim()}`) : '';
+      const hasQrImg = shopInfo.reviewQrUrl && typeof shopInfo.reviewQrUrl === 'string' && shopInfo.reviewQrUrl.startsWith('data:image/');
 
-      y += 44;
+      if (reviewUrl || hasQrImg) {
+        const bannerH = 46;
+        doc.roundedRect(marginL, y, contentW, bannerH, 6).fill('#F8FAFC');
+        doc.roundedRect(marginL, y, contentW, bannerH, 6).strokeColor(borderColor).lineWidth(0.8).stroke();
+
+        let textLeft = marginL + 12;
+        if (hasQrImg) {
+          try {
+            const base64Data = shopInfo.reviewQrUrl.replace(/^data:image\/\w+;base64,/, '');
+            const qrBuf = Buffer.from(base64Data, 'base64');
+            doc.image(qrBuf, marginL + 8, y + 5, { fit: [36, 36] });
+            textLeft = marginL + 52;
+          } catch (e) {
+            console.warn('[PDFKit] Review QR image draw warning:', e.message);
+          }
+        }
+
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#D97706').text('* RATE YOUR EXPERIENCE ON GOOGLE', textLeft, y + 6);
+
+        if (reviewUrl) {
+          doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#2563EB').text(`Tap link or scan QR to leave us a 5-Star Review:  ${reviewUrl}`, textLeft, y + 20, {
+            width: contentW - (textLeft - marginL) - 12,
+            link: reviewUrl,
+            underline: true,
+          });
+
+          // Add interactive clickable PDF link annotation over entire banner
+          doc.link(marginL, y, contentW, bannerH, reviewUrl);
+        } else {
+          doc.fontSize(8.5).font('Helvetica').fillColor(navy).text('Scan QR Code to leave us a 5-Star Review!', textLeft, y + 20);
+        }
+
+        y += bannerH + 12;
+      }
 
       // ══════════════════════════════════════════════════
       //  TERMS & CONDITIONS BLOCK

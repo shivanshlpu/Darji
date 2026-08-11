@@ -641,17 +641,29 @@ export function generateInvoiceHTML(data: InvoiceData): string {
       </div>
     </div>
 
-    ${(data.reviewLink || data.reviewQrUrl) ? `
-    <!-- ⭐ Google Review QR Banner -->
-    <div style="display: flex; align-items: center; gap: 16px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 10px 16px; margin: 12px 0 4px 0;">
-      <img src="${data.reviewQrUrl || `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(data.reviewLink || '')}`}" alt="Google Review QR" style="width: 64px; height: 64px; object-fit: contain; border-radius: 6px; border: 1px solid #CBD5E1; background: #FFFFFF; padding: 2px;" />
-      <div style="display: flex; flex-direction: column; gap: 2px;">
-        <span style="font-size: 11px; font-weight: 800; color: #D97706; letter-spacing: 0.3px;">⭐ RATE YOUR EXPERIENCE ON GOOGLE</span>
-        <span style="font-size: 12px; font-weight: 700; color: #0B1F3A;">Scan QR Code or visit link to leave us a 5-Star Review!</span>
-        ${data.reviewLink ? `<a href="${data.reviewLink}" target="_blank" style="font-size: 11px; color: #2563EB; font-weight: 600; word-break: break-all; text-decoration: underline;">${data.reviewLink}</a>` : ''}
-      </div>
-    </div>
-    ` : ''}
+    ${(() => {
+      const rawUrl = data.reviewLink || '';
+      const linkUrl = rawUrl.trim() ? (/^https?:\/\//i.test(rawUrl.trim()) ? rawUrl.trim() : `https://${rawUrl.trim()}`) : '';
+      const qrSrc = data.reviewQrUrl || (linkUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(linkUrl)}` : null);
+
+      if (!linkUrl && !qrSrc) return '';
+
+      const bannerContent = `
+        <div style="display: flex; align-items: center; gap: 16px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 10px 16px; margin: 12px 0 4px 0; text-decoration: none;">
+          ${qrSrc ? `<img src="${qrSrc}" alt="Google Review QR" style="width: 64px; height: 64px; object-fit: contain; border-radius: 6px; border: 1px solid #CBD5E1; background: #FFFFFF; padding: 2px; flex-shrink: 0;" />` : ''}
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 11px; font-weight: 800; color: #D97706; letter-spacing: 0.3px;">⭐ RATE YOUR EXPERIENCE ON GOOGLE</span>
+            <span style="font-size: 12px; font-weight: 700; color: #0B1F3A;">Scan QR Code or tap to leave us a 5-Star Review!</span>
+            ${linkUrl ? `<span style="font-size: 11px; color: #2563EB; font-weight: 600; word-break: break-all; text-decoration: underline;">${linkUrl}</span>` : ''}
+          </div>
+        </div>
+      `;
+
+      if (linkUrl) {
+        return `<a href="${linkUrl}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; color: inherit; display: block; page-break-inside: avoid; break-inside: avoid;">${bannerContent}</a>`;
+      }
+      return `<div style="page-break-inside: avoid; break-inside: avoid;">${bannerContent}</div>`;
+    })()}
 
     ${(() => {
       const rawTerms = data.termsAndConditions || data.terms;

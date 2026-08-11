@@ -113,7 +113,9 @@ export const sendInvoicePDF = async (req, res) => {
     let captionText = `Namaste ${customerName} ji! 🙏\nAttached is your official PDF Invoice #${invoiceNo} from *${shopName}*.\n\nTotal: ₹${totalAmount.toLocaleString('en-IN')}\nAdvance Paid: ₹${advancePaid.toLocaleString('en-IN')}\nBalance Due: ₹${balanceDue.toLocaleString('en-IN')}\n`;
 
     if (shopConfig.reviewLink) {
-      captionText += `\n⭐ *Rate Your Experience / Leave Feedback:* \n${shopConfig.reviewLink}\n`;
+      const rawReview = shopConfig.reviewLink.trim();
+      const reviewUrl = /^https?:\/\//i.test(rawReview) ? rawReview : `https://${rawReview}`;
+      captionText += `\n⭐ *Rate Your Experience / Leave Feedback:* \n${reviewUrl}\n`;
     }
 
     captionText += `\nThank you for choosing *${shopName}*!`;
