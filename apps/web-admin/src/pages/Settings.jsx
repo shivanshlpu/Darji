@@ -16,7 +16,7 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveErrorMsg, setSaveErrorMsg] = useState(null);
   const { t, language } = useLanguageStore();
-  const { updatePassword } = useAuthStore();
+  const { updatePassword, logout, user } = useAuthStore();
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -686,67 +686,112 @@ export default function SettingsPage() {
 
 
           {activeTab === 'security' && (
-            <form onSubmit={handlePasswordUpdate} className="settings__card animate-fade-in">
-              <h3>{language === 'hi' ? 'खाता सुरक्षा एवं पासवर्ड अपडेट' : 'Account Security & Password Update'}</h3>
-              <p className="settings__hint">
-                {language === 'hi'
-                  ? 'अपना पासवर्ड यहां से बदलें। अगली बार नए पासवर्ड का उपयोग करके लॉगिन करें।'
-                  : 'Change your account password directly here. Use your new password to sign in next time.'}
-              </p>
+            <>
+              <form onSubmit={handlePasswordUpdate} className="settings__card animate-fade-in">
+                <h3>{language === 'hi' ? 'खाता सुरक्षा एवं पासवर्ड अपडेट' : 'Account Security & Password Update'}</h3>
+                <p className="settings__hint">
+                  {language === 'hi'
+                    ? 'अपना पासवर्ड यहां से बदलें। अगली बार नए पासवर्ड का उपयोग करके लॉगिन करें।'
+                    : 'Change your account password directly here. Use your new password to sign in next time.'}
+                </p>
 
-              {passwordMsg && (
-                <div className="settings__saved" style={{ marginBottom: '1rem' }}>
-                  <CheckCircle size={16} /> {passwordMsg}
+                {passwordMsg && (
+                  <div className="settings__saved" style={{ marginBottom: '1rem' }}>
+                    <CheckCircle size={16} /> {passwordMsg}
+                  </div>
+                )}
+
+                {passwordError && (
+                  <div style={{ color: 'var(--color-danger-500)', fontSize: '13px', marginBottom: '1rem', background: 'rgba(239,68,68,0.1)', padding: '8px 12px', borderRadius: '6px' }}>
+                    ⚠️ {passwordError}
+                  </div>
+                )}
+
+                <div className="settings__grid" style={{ maxWidth: '500px' }}>
+                  <div className="modal__field">
+                    <label>{language === 'hi' ? 'वर्तमान पासवर्ड *' : 'Current Password *'}</label>
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                    />
+                  </div>
+
+                  <div className="modal__field">
+                    <label>{language === 'hi' ? 'नया पासवर्ड *' : 'New Password *'}</label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                    />
+                  </div>
+
+                  <div className="modal__field">
+                    <label>{language === 'hi' ? 'नया पासवर्ड दोबारा दर्ज करें *' : 'Confirm New Password *'}</label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                    />
+                  </div>
                 </div>
-              )}
 
-              {passwordError && (
-                <div style={{ color: 'var(--color-danger-500)', fontSize: '13px', marginBottom: '1rem', background: 'rgba(239,68,68,0.1)', padding: '8px 12px', borderRadius: '6px' }}>
-                  ⚠️ {passwordError}
+                <div className="settings__footer" style={{ marginTop: '1.5rem' }}>
+                  <button type="submit" className="modal__btn modal__btn--primary">
+                    <Save size={16} /> {language === 'hi' ? 'पासवर्ड अपडेट करें' : 'Update Password'}
+                  </button>
                 </div>
-              )}
+              </form>
 
-              <div className="settings__grid" style={{ maxWidth: '500px' }}>
-                <div className="modal__field">
-                  <label>{language === 'hi' ? 'वर्तमान पासवर्ड *' : 'Current Password *'}</label>
-                  <input
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
+              {/* Explicit Account Sign Out / Logout Card */}
+              <div className="settings__card animate-fade-in" style={{ marginTop: '20px', borderColor: 'rgba(239, 68, 68, 0.25)', background: 'var(--bg-elevated)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+                  <div>
+                    <h3 style={{ margin: 0, color: 'var(--color-navy-700)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <LogOut size={20} color="#ef4444" />
+                      {language === 'hi' ? 'लॉगआउट करें (Sign Out from App)' : 'Log Out from Account'}
+                    </h3>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                      {language === 'hi'
+                        ? `वर्तमान में एक्टिव अकाउंट: ${user?.phone || '9479487828'} (${user?.name || 'Owner'})। नए पासवर्ड या अलग नंबर से लॉगिन करने के लिए बाहर निकलें।`
+                        : `Currently signed in as ${user?.name || 'Owner'} (${user?.phone || '9479487828'}). Sign out to log in with new credentials.`}
+                    </p>
+                  </div>
 
-                <div className="modal__field">
-                  <label>{language === 'hi' ? 'नया पासवर्ड *' : 'New Password *'}</label>
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
-
-                <div className="modal__field">
-                  <label>{language === 'hi' ? 'नया पासवर्ड दोबारा दर्ज करें *' : 'Confirm New Password *'}</label>
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                  />
+                  <button
+                    type="button"
+                    className="modal__btn"
+                    onClick={() => {
+                      if (window.confirm(language === 'hi' ? 'क्या आप निश्चित रूप से लॉगआउट करना चाहते हैं?' : 'Are you sure you want to log out of Darji App?')) {
+                        logout();
+                      }
+                    }}
+                    style={{
+                      background: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      padding: '10px 20px',
+                      fontWeight: 700,
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      boxShadow: '0 4px 12px rgba(239, 68, 68, 0.25)',
+                    }}
+                  >
+                    <LogOut size={16} />
+                    {language === 'hi' ? 'लॉगआउट करें (Sign Out)' : 'Log Out Account'}
+                  </button>
                 </div>
               </div>
-
-              <div className="settings__footer" style={{ marginTop: '1.5rem' }}>
-                <button type="submit" className="modal__btn modal__btn--primary">
-                  <Save size={16} /> {language === 'hi' ? 'पासवर्ड अपडेट करें' : 'Update Password'}
-                </button>
-              </div>
-            </form>
+            </>
           )}
 
           {activeTab === 'pwa' && (

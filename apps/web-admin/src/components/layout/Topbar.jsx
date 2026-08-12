@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Search, Bell, Sun, Moon, Menu, X, Eye, EyeOff } from 'lucide-react';
+import { Search, Bell, Sun, Moon, Menu, X, Eye, EyeOff, LogOut } from 'lucide-react';
 import useThemeStore from '../../store/themeStore';
 import useAppStore from '../../store/appStore';
 import useAuthStore from '../../store/authStore';
@@ -13,7 +13,7 @@ export default function Topbar({ pageTitle }) {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useThemeStore();
   const { notifications, markNotificationRead, getUnreadCount, toggleSidebar } = useAppStore();
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const { isAmountHidden, toggleAmountHidden } = usePrivacyStore();
   const { language, toggleLanguage } = useLanguageStore();
   const [showNotifications, setShowNotifications] = useState(false);
@@ -144,11 +144,23 @@ export default function Topbar({ pageTitle }) {
           )}
         </div>
 
-        {/* User */}
-        <div className="topbar__user">
-          <div className="topbar__user-avatar">
+        {/* User & Logout */}
+        <div className="topbar__user" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="topbar__user-avatar" title={`Logged in as ${user?.name || 'Owner'} (${user?.phone || ''})`}>
             {user?.name?.charAt(0) || 'U'}
           </div>
+          <button
+            className="topbar__icon-btn"
+            onClick={() => {
+              if (window.confirm(language === 'hi' ? 'क्या आप निश्चित रूप से लॉगआउट करना चाहते हैं?' : 'Are you sure you want to log out?')) {
+                logout();
+              }
+            }}
+            title={language === 'hi' ? 'लॉगआउट करें' : 'Log Out'}
+            style={{ color: '#ef4444' }}
+          >
+            <LogOut size={18} />
+          </button>
         </div>
       </div>
     </header>
