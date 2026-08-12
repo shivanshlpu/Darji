@@ -285,9 +285,18 @@ export default function Billing() {
                         }
                         try {
                           setPdfMsg({ success: true, text: `🔔 Sending payment reminder to ${targetMobile}...` });
-                          await apiClient.sendPaymentReminderWhatsApp({ orderId: activeInvoice.orderNumber, mobile: targetMobile }).catch(() => {});
+                          const res = await apiClient.sendPaymentReminderWhatsApp({
+                            order: activeInvoiceData || activeInvoice,
+                            orderId: activeInvoice.orderNumber,
+                            mobile: targetMobile
+                          });
+                          if (res.success) {
+                            setPdfMsg({ success: true, text: res.message || `Payment reminder sent to ${targetMobile}!` });
+                          } else {
+                            setPdfMsg({ success: false, text: res.error || 'Failed to send payment reminder' });
+                          }
                         } catch (e) {
-                          console.warn('Reminder error:', e);
+                          setPdfMsg({ success: false, text: e.message || 'Failed to send payment reminder' });
                         }
                       }}
                     >

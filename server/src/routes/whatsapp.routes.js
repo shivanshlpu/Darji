@@ -5,6 +5,7 @@ import {
   reconnect,
   sendTestMessage,
   sendInvoicePDF,
+  sendPaymentReminder,
   getTemplates,
   saveTemplate,
   getLogs,
@@ -17,6 +18,7 @@ router.post('/disconnect', disconnect);
 router.post('/reconnect', reconnect);
 router.post('/test', sendTestMessage);
 router.post('/send-invoice-pdf', sendInvoicePDF);
+router.post('/send-payment-reminder', sendPaymentReminder);
 router.get('/templates', getTemplates);
 router.post('/templates', saveTemplate);
 router.get('/logs', getLogs);

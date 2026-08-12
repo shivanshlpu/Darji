@@ -89,6 +89,7 @@ export const api = {
   reconnectWhatsApp: () => request('/whatsapp/reconnect', { method: 'POST' }),
   sendWhatsAppTest: (data) => request('/whatsapp/test', { method: 'POST', body: JSON.stringify(data) }),
   sendWhatsAppInvoicePDF: (data) => request('/whatsapp/send-invoice-pdf', { method: 'POST', body: JSON.stringify(data) }),
+  sendPaymentReminderWhatsApp: (data) => request('/whatsapp/send-payment-reminder', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 export const apiClient = api;

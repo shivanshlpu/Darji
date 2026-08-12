@@ -385,7 +385,7 @@ export default function SettingsPage() {
                     <PhoneCall size={18} style={{ color: '#0284c7' }} /> Bill Contact Numbers (Add 2-3 Numbers to Print on Bill)
                   </h4>
                   <span style={{ fontSize: '12px', fontWeight: 600, background: '#e0f2fe', color: '#0369a1', padding: '4px 10px', borderRadius: '6px', border: '1px solid #bae6fd' }}>
-                    Account Login Mobile: <strong>+91 90091 49694</strong>
+                    Account Login Mobile: <strong>+91 9479487828</strong>
                   </span>
                 </div>
                 <p style={{ fontSize: '12px', color: '#475569', marginBottom: '14px' }}>

@@ -132,6 +132,35 @@ export const sendInvoicePDF = async (req, res) => {
   }
 };
 
+export const sendPaymentReminder = async (req, res) => {
+  try {
+    const { order, orderId, mobile } = req.body;
+    let targetOrder = order;
+
+    if (!targetOrder && orderId) {
+      const Order = (await import('../models/Order.js')).default;
+      targetOrder = await Order.findOne({ $or: [{ _id: orderId.match(/^[0-9a-fA-F]{24}$/) ? orderId : null }, { orderNumber: orderId }, { tokenNumber: orderId }] });
+    }
+
+    const targetMobile = mobile || targetOrder?.customerPhone || targetOrder?.customer?.phone || targetOrder?.customerMobile;
+    if (!targetMobile) {
+      return res.status(400).json({ success: false, error: 'Customer mobile number is required.' });
+    }
+
+    const customerName = targetOrder?.customerName || targetOrder?.customer?.name || 'Customer';
+    const pendingAmount = targetOrder?.balanceDue || targetOrder?.remaining || targetOrder?.pendingAmount || targetOrder?.grandTotal || 0;
+    const tokenStr = targetOrder?.tokenNumber || targetOrder?.orderNumber || 'Order';
+
+    const text = `🧾 *DARJI — PAYMENT REMINDER* 🧾\n\nNamaste *${customerName} ji*! 🙏\nThis is a gentle reminder regarding your pending balance of *₹${pendingAmount.toLocaleString('en-IN')}* for order *${tokenStr}* at *DARJI*.\n\nPlease clear the pending amount at your earliest convenience or upon pickup.\n\n📍 Shop Address: 80/LIG 1ST New Housing Board Colony, Shahdol (M.P.)\n📞 Contact: 7828962210, 7000621972\n\nThank you for choosing *DARJI*!`;
+
+    const result = await sendWhatsappMessage(targetMobile, text, null, req.user?.id);
+    res.json({ success: true, message: `Payment reminder sent to +91 ${targetMobile}!`, ...result });
+  } catch (err) {
+    console.error('[WhatsApp Controller] sendPaymentReminder error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
 export const getTemplates = async (req, res) => {
   try {
     let templates = await WhatsappTemplate.find();
