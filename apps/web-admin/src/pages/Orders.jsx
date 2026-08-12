@@ -531,7 +531,7 @@ export default function Orders() {
     setOrderItems(updated);
   };
 
-  const handleCreateOrder = (e) => {
+  const handleCreateOrder = async (e) => {
     e.preventDefault();
 
     // Auto-capture any unsubmitted custom measurements from the DOM
@@ -617,7 +617,6 @@ export default function Orders() {
     const newTokenNumber = `T-${maxTokenNum + 1}`;
 
     const newOrder = {
-      _id: 'ord_' + Math.random().toString(36).substr(2, 9),
       orderNumber: newOrderNumber,
       tokenNumber: newTokenNumber,
       customerId: custId,
@@ -637,7 +636,17 @@ export default function Orders() {
       createdAt: new Date().toISOString(),
     };
 
-    addOrder(newOrder);
+    let savedOrder = null;
+    try {
+      savedOrder = await addOrder(newOrder);
+      await fetchOrdersFromDB();
+    } catch (err) {
+      alert(`⚠️ Could not save order to Database: ${err.message || 'Server error'}`);
+      return;
+    }
+
+    const createdOrderNumber = savedOrder?.orderNumber || newOrderNumber;
+    const createdTokenNumber = savedOrder?.tokenNumber || newTokenNumber;
 
     // Reset filters & search so newly created order is immediately visible in view
     setSearch('');
@@ -653,7 +662,7 @@ export default function Orders() {
     const sAddr = shopInfo?.address || '80/LIG 1ST New Housing Board Colony, Shahdol (M.P.)';
     const sPhone = shopInfo?.phone || '';
 
-    let bookingText = `✨ *${sName.toUpperCase()} — NEW ORDER REGISTERED* ✨\n\nDear *${custName} ji*,\nYour order *${newTokenNumber}* (${newOrderNumber}) has been registered!\n\n📋 *Register Details*:\n• Items: ${itemsSummaryList}\n💰 Total Amount: ₹${subtotal}\n💵 Advance Paid: ₹${paid}\n📌 Balance Due: ₹${pending}\n⏳ Expected Delivery: ${expectedDays} Days (${deliveryFormatted})\n\n📍 Address: ${sAddr}`;
+    let bookingText = `✨ *${sName.toUpperCase()} — NEW ORDER REGISTERED* ✨\n\nDear *${custName} ji*,\nYour order *${createdTokenNumber}* (${createdOrderNumber}) has been registered!\n\n📋 *Register Details*:\n• Items: ${itemsSummaryList}\n💰 Total Amount: ₹${subtotal}\n💵 Advance Paid: ₹${paid}\n📌 Balance Due: ₹${pending}\n⏳ Expected Delivery: ${expectedDays} Days (${deliveryFormatted})\n\n📍 Address: ${sAddr}`;
     if (sPhone) {
       bookingText += `\n📞 Contact: ${sPhone}`;
     }
@@ -663,14 +672,14 @@ export default function Orders() {
     if (custMobile) {
       apiClient.sendWhatsAppTest({ mobile: custMobile, text: bookingText })
         .then(() => {
-          showToast(`📱 Order ${newTokenNumber} created & WhatsApp sent to +91 ${custMobile}!`);
+          showToast(`📱 Order ${createdTokenNumber} saved to DB & WhatsApp sent!`);
         })
         .catch((err) => {
           console.warn('[WhatsApp Booking Notification Warning]:', err.message);
-          showToast(`✅ Order ${newTokenNumber} created!`);
+          showToast(`✅ Order ${createdTokenNumber} saved to DB!`);
         });
     } else {
-      showToast(`✅ Order ${newTokenNumber} created!`);
+      showToast(`✅ Order ${createdTokenNumber} saved to DB!`);
     }
 
     // Reset Modal

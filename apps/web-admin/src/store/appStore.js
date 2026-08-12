@@ -71,28 +71,24 @@ const useAppStore = create((set, get) => ({
   addOrder: async (newOrder) => {
     try {
       const res = await api.createOrder(newOrder);
-      if (res.success && res.data) {
+      if (res && res.success && res.data) {
+        const savedOrder = res.data;
         set((state) => {
-          const updatedOrders = [res.data, ...state.orders];
+          // Remove any duplicate if temporary ID matched, and prepend newly saved MongoDB order
+          const filtered = state.orders.filter(o => o._id !== savedOrder._id && o.orderNumber !== savedOrder.orderNumber);
+          const updatedOrders = [savedOrder, ...filtered];
           return {
             orders: updatedOrders,
             dashboardData: generateDashboardData(updatedOrders, state.expenses),
           };
         });
-        return;
+        return savedOrder;
       }
+      throw new Error(res?.message || 'Failed to save order to database');
     } catch (err) {
-      console.warn('[addOrder DB Sync Warning]:', err.message);
+      console.error('[addOrder DB Persistence Error]:', err.message);
+      throw err;
     }
-
-    // Local state fallback
-    set((state) => {
-      const updatedOrders = [newOrder, ...state.orders];
-      return {
-        orders: updatedOrders,
-        dashboardData: generateDashboardData(updatedOrders, state.expenses),
-      };
-    });
   },
 
   updateOrderStatus: (orderId, newStatus) => {

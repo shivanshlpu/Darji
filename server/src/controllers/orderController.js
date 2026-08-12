@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import Order from '../models/Order.js';
 import Customer from '../models/Customer.js';
 import Measurement from '../models/Measurement.js';
+import Shop from '../models/Shop.js';
 import { sendWhatsappMessage } from '../services/whatsapp.service.js';
 
 const ALLOWED_TRANSITIONS = {
@@ -62,36 +63,91 @@ export const createOrder = async (req, res) => {
     const body = { ...req.body };
     delete body._id;
 
-    let customerId = body.customerId;
-    if (!customerId || !mongoose.Types.ObjectId.isValid(customerId)) {
-      if (body.customerMobile) {
-        let cust = await Customer.findOne({ mobile: body.customerMobile, isDeleted: false });
-        if (!cust) {
-          cust = await Customer.create({
-            shopId: req.shopId,
-            name: body.customerName || 'Customer',
-            mobile: body.customerMobile,
-            address: body.customerAddress || '',
-          });
-        }
-        customerId = cust._id;
+    // 1. Resolve Shop ID
+    let shopId = req.shopId;
+    if (!shopId || !mongoose.Types.ObjectId.isValid(shopId)) {
+      const activeShop = await Shop.findOne({});
+      if (activeShop) {
+        shopId = activeShop._id;
       } else {
-        const dummyCust = await Customer.create({
-          shopId: req.shopId,
-          name: body.customerName || 'Walk-in Customer',
-          mobile: '9000000000',
+        const newShop = await Shop.create({
+          name: 'Darji Premium Tailors',
+          phone: '+91 99999 99999',
+          email: 'admin@darjitailors.com',
+          address: 'Surat, Gujarat',
         });
-        customerId = dummyCust._id;
+        shopId = newShop._id;
       }
     }
 
-    const orderCount = await Order.countDocuments({ shopId: req.shopId });
-    const orderNumber = body.orderNumber || `ORD-${new Date().getFullYear()}-${String(orderCount + 1).padStart(6, '0')}`;
-    const tokenNumber = body.tokenNumber || `T-${101 + orderCount}`;
+    // 2. Resolve Customer ID
+    let customerId = body.customerId;
+    if (!customerId || !mongoose.Types.ObjectId.isValid(customerId)) {
+      const rawMobile = body.customerMobile || '';
+      const cleanDigits = String(rawMobile).replace(/\D/g, '').slice(-10);
+      let cust = null;
+      if (cleanDigits) {
+        cust = await Customer.findOne({
+          mobile: { $regex: cleanDigits },
+          isDeleted: false,
+        });
+      }
+      if (!cust) {
+        cust = await Customer.create({
+          shopId,
+          name: body.customerName || 'Customer',
+          mobile: rawMobile || (cleanDigits ? `+91 ${cleanDigits}` : '9000000000'),
+          address: body.customerAddress || '',
+        });
+      }
+      customerId = cust._id;
+    }
+
+    // 3. Resolve Unique Order Number & Token Number (Avoid duplicate key errors)
+    let orderNumber = body.orderNumber;
+    if (orderNumber) {
+      const existing = await Order.findOne({ orderNumber, isDeleted: false });
+      if (existing) orderNumber = null;
+    }
+
+    if (!orderNumber) {
+      const count = await Order.countDocuments({});
+      let seq = count + 1;
+      orderNumber = `ORD-${new Date().getFullYear()}-${String(seq).padStart(6, '0')}`;
+      let exists = await Order.findOne({ orderNumber });
+      while (exists) {
+        seq++;
+        orderNumber = `ORD-${new Date().getFullYear()}-${String(seq).padStart(6, '0')}`;
+        exists = await Order.findOne({ orderNumber });
+      }
+    }
+
+    let tokenNumber = body.tokenNumber;
+    if (!tokenNumber) {
+      const count = await Order.countDocuments({});
+      tokenNumber = `T-${101 + count}`;
+    }
+
+    // 4. Sanitize Items Payload
+    const items = Array.isArray(body.items) && body.items.length > 0
+      ? body.items.map(it => ({
+          name: it.name || 'Custom Garment',
+          category: it.category || 'topWear',
+          qty: Number(it.qty) || 1,
+          price: Number(it.price) || 0,
+          notes: it.notes || '',
+          measurements: typeof it.measurements === 'object' && it.measurements ? it.measurements : {},
+        }))
+      : [{ name: 'Custom Suit', category: 'topWear', qty: 1, price: 1200, notes: '', measurements: {} }];
+
+    const subtotal = Number(body.subtotal) || items.reduce((sum, item) => sum + (item.qty * item.price), 0);
+    const paidAmount = Number(body.paidAmount !== undefined ? body.paidAmount : body.advancePaid) || 0;
+    const pendingAmount = Math.max(0, subtotal - paidAmount);
+    const paymentStatus = pendingAmount <= 0 ? 'paid' : paidAmount > 0 ? 'partial' : 'unpaid';
     const delDate = body.deliveryDate ? new Date(body.deliveryDate) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     const order = await Order.create({
-      shopId: req.shopId,
+      shopId,
       orderNumber,
       tokenNumber,
       customerId,
@@ -100,17 +156,18 @@ export const createOrder = async (req, res) => {
       deliveryDate: delDate,
       priority: body.priority || 'normal',
       status: body.status || 'pending',
-      items: Array.isArray(body.items) ? body.items : [{ name: 'Custom Suit', category: 'topWear', qty: 1, price: 1200 }],
+      items,
       notes: body.notes || '',
-      subtotal: Number(body.subtotal) || 1200,
-      paidAmount: Number(body.paidAmount || body.advancePaid) || 0,
-      pendingAmount: Number(body.pendingAmount || body.balanceDue) || 1200,
-      paymentStatus: body.paymentStatus || 'unpaid',
+      subtotal,
+      paidAmount,
+      pendingAmount,
+      paymentStatus,
       timeline: [{ status: 'pending', timestamp: new Date(), updatedBy: 'Owner' }],
     });
 
     res.status(201).json({ success: true, data: order });
   } catch (err) {
+    console.error('[Order Create Error]:', err);
     res.status(400).json({ success: false, message: err.message });
   }
 };
