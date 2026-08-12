@@ -143,24 +143,39 @@ const useAppStore = create((set, get) => ({
     });
   },
 
-  updateOrderBill: (orderId, { items, subtotal, paidAmount, discount, extraCharges }) => {
+  updateOrderBill: async (orderId, { items, subtotal, paidAmount, discount, discountType, discountValue, extraCharges }) => {
+    let payload = {};
     set((state) => {
       const updatedOrders = state.orders.map((o) => {
-        if (o._id === orderId) {
-          const newSubtotal = subtotal !== undefined ? subtotal : o.subtotal;
-          const newPaid = paidAmount !== undefined ? paidAmount : o.paidAmount;
-          const newPending = Math.max(0, newSubtotal - newPaid);
+        if (o._id === orderId || o.orderNumber === orderId) {
+          const newItems = items || o.items || [];
+          const newSubtotal = subtotal !== undefined ? subtotal : newItems.reduce((s, i) => s + ((i.qty || 1) * (Number(i.price) || 0)), 0);
+          const newDiscount = discount !== undefined ? discount : (o.discount || 0);
+          const newExtraCharges = extraCharges !== undefined ? extraCharges : (o.extraCharges || 0);
+          const newGrandTotal = Math.max(0, newSubtotal - newDiscount + newExtraCharges);
+          const newPaid = paidAmount !== undefined ? paidAmount : (o.paidAmount || o.advancePaid || 0);
+          const newPending = Math.max(0, newGrandTotal - newPaid);
           const newPaymentStatus = newPending <= 0 ? 'paid' : newPaid > 0 ? 'partial' : 'unpaid';
+
+          payload = {
+            items: newItems,
+            subtotal: newSubtotal,
+            discount: newDiscount,
+            discountType: discountType || o.discountType || 'amount',
+            discountValue: discountValue !== undefined ? discountValue : (o.discountValue || newDiscount),
+            extraCharges: newExtraCharges,
+            grandTotal: newGrandTotal,
+            totalAmount: newGrandTotal,
+            paidAmount: newPaid,
+            advancePaid: newPaid,
+            pendingAmount: newPending,
+            balanceDue: newPending,
+            paymentStatus: newPaymentStatus,
+          };
 
           return {
             ...o,
-            ...(items ? { items } : {}),
-            subtotal: newSubtotal,
-            paidAmount: newPaid,
-            pendingAmount: newPending,
-            paymentStatus: newPaymentStatus,
-            discount: discount || 0,
-            extraCharges: extraCharges || 0,
+            ...payload,
           };
         }
         return o;
@@ -171,6 +186,25 @@ const useAppStore = create((set, get) => ({
         dashboardData: generateDashboardData(updatedOrders, state.expenses),
       };
     });
+
+    try {
+      const targetId = typeof orderId === 'object' ? orderId._id : orderId;
+      const res = await api.updateOrder(targetId, payload);
+      if (res && res.success && res.data) {
+        set((state) => {
+          const updatedOrders = state.orders.map((o) =>
+            (o._id === targetId || o.orderNumber === targetId || o._id === res.data._id) ? res.data : o
+          );
+          return {
+            orders: updatedOrders,
+            dashboardData: generateDashboardData(updatedOrders, state.expenses),
+          };
+        });
+        return res.data;
+      }
+    } catch (err) {
+      console.error('[updateOrderBill DB Sync Error]:', err.message);
+    }
   },
 
   updateOrder: async (orderId, updatedFields) => {
@@ -179,10 +213,12 @@ const useAppStore = create((set, get) => ({
       const updatedOrders = state.orders.map((o) => {
         if (o._id === orderId || o.orderNumber === orderId) {
           const items = updatedFields.items || o.items || [];
-          const subtotal = items.reduce((sum, item) => sum + (Number(item.qty || 1) * Number(item.price || 0)), 0);
-          const totalAmount = updatedFields.totalAmount !== undefined ? Number(updatedFields.totalAmount) : (o.totalAmount || subtotal);
-          const advancePaid = updatedFields.advancePaid !== undefined ? Number(updatedFields.advancePaid) : (o.advancePaid || o.paidAmount || 0);
-          const balanceDue = Math.max(0, totalAmount - advancePaid);
+          const subtotal = updatedFields.subtotal !== undefined ? Number(updatedFields.subtotal) : items.reduce((sum, item) => sum + (Number(item.qty || 1) * Number(item.price || 0)), 0);
+          const discount = updatedFields.discount !== undefined ? Number(updatedFields.discount) : (o.discount || 0);
+          const extraCharges = updatedFields.extraCharges !== undefined ? Number(updatedFields.extraCharges) : (o.extraCharges || 0);
+          const grandTotal = updatedFields.grandTotal !== undefined ? Number(updatedFields.grandTotal) : (updatedFields.totalAmount !== undefined ? Number(updatedFields.totalAmount) : Math.max(0, subtotal - discount + extraCharges));
+          const advancePaid = updatedFields.advancePaid !== undefined ? Number(updatedFields.advancePaid) : (updatedFields.paidAmount !== undefined ? Number(updatedFields.paidAmount) : (o.advancePaid || o.paidAmount || 0));
+          const balanceDue = Math.max(0, grandTotal - advancePaid);
           const paymentStatus = balanceDue <= 0 ? 'paid' : advancePaid > 0 ? 'partial' : 'unpaid';
 
           return {
@@ -190,7 +226,10 @@ const useAppStore = create((set, get) => ({
             ...updatedFields,
             items,
             subtotal,
-            totalAmount,
+            discount,
+            extraCharges,
+            grandTotal,
+            totalAmount: grandTotal,
             advancePaid,
             paidAmount: advancePaid,
             balanceDue,

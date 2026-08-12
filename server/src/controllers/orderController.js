@@ -141,8 +141,13 @@ export const createOrder = async (req, res) => {
       : [{ name: 'Custom Suit', category: 'topWear', qty: 1, price: 1200, notes: '', measurements: {} }];
 
     const subtotal = Number(body.subtotal) || items.reduce((sum, item) => sum + (item.qty * item.price), 0);
+    const discount = Number(body.discount) || 0;
+    const discountType = body.discountType || 'amount';
+    const discountValue = Number(body.discountValue) || discount;
+    const extraCharges = Number(body.extraCharges) || 0;
+    const grandTotal = Math.max(0, subtotal - discount + extraCharges);
     const paidAmount = Number(body.paidAmount !== undefined ? body.paidAmount : body.advancePaid) || 0;
-    const pendingAmount = Math.max(0, subtotal - paidAmount);
+    const pendingAmount = Math.max(0, grandTotal - paidAmount);
     const paymentStatus = pendingAmount <= 0 ? 'paid' : paidAmount > 0 ? 'partial' : 'unpaid';
     const delDate = body.deliveryDate ? new Date(body.deliveryDate) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
@@ -159,8 +164,16 @@ export const createOrder = async (req, res) => {
       items,
       notes: body.notes || '',
       subtotal,
+      discount,
+      discountType,
+      discountValue,
+      extraCharges,
+      grandTotal,
+      totalAmount: grandTotal,
       paidAmount,
+      advancePaid: paidAmount,
       pendingAmount,
+      balanceDue: pendingAmount,
       paymentStatus,
       timeline: [{ status: 'pending', timestamp: new Date(), updatedBy: 'Owner' }],
     });
@@ -178,16 +191,25 @@ export const updateOrder = async (req, res) => {
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
     const items = req.body.items || order.items;
-    const subtotal = items.reduce((sum, item) => sum + (Number(item.qty || 1) * Number(item.price || 0)), 0);
-    const totalAmount = req.body.totalAmount !== undefined ? Number(req.body.totalAmount) : (order.totalAmount || subtotal);
-    const advancePaid = req.body.advancePaid !== undefined ? Number(req.body.advancePaid) : (order.advancePaid || order.paidAmount || 0);
-    const balanceDue = Math.max(0, totalAmount - advancePaid);
+    const subtotal = req.body.subtotal !== undefined ? Number(req.body.subtotal) : items.reduce((sum, item) => sum + (Number(item.qty || 1) * Number(item.price || 0)), 0);
+    const discount = req.body.discount !== undefined ? Number(req.body.discount) : (order.discount || 0);
+    const discountType = req.body.discountType || order.discountType || 'amount';
+    const discountValue = req.body.discountValue !== undefined ? Number(req.body.discountValue) : (order.discountValue || discount);
+    const extraCharges = req.body.extraCharges !== undefined ? Number(req.body.extraCharges) : (order.extraCharges || 0);
+    const grandTotal = req.body.grandTotal !== undefined ? Number(req.body.grandTotal) : Math.max(0, subtotal - discount + extraCharges);
+    const advancePaid = req.body.advancePaid !== undefined ? Number(req.body.advancePaid) : (req.body.paidAmount !== undefined ? Number(req.body.paidAmount) : (order.advancePaid || order.paidAmount || 0));
+    const balanceDue = Math.max(0, grandTotal - advancePaid);
     const paymentStatus = balanceDue <= 0 ? 'paid' : advancePaid > 0 ? 'partial' : 'unpaid';
 
     Object.assign(order, req.body, {
       items,
       subtotal,
-      totalAmount,
+      discount,
+      discountType,
+      discountValue,
+      extraCharges,
+      grandTotal,
+      totalAmount: grandTotal,
       advancePaid,
       paidAmount: advancePaid,
       balanceDue,
@@ -245,7 +267,7 @@ export const markOrderAsPaid = async (req, res) => {
     const order = await findOrderByIdOrNumber(req.params.id);
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
-    const paidVal = order.totalAmount || order.subtotal || 0;
+    const paidVal = order.grandTotal || order.totalAmount || Math.max(0, (order.subtotal || 0) - (order.discount || 0) + (order.extraCharges || 0));
     order.advancePaid = paidVal;
     order.paidAmount = paidVal;
     order.balanceDue = 0;

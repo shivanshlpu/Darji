@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import {
   FileText, Search, Printer, Share2, Plus, Download, IndianRupee,
-  CheckCircle, Clock, AlertCircle, X, ShieldCheck, Tag, Sparkles
+  CheckCircle, Clock, AlertCircle, X, ShieldCheck, Tag, Sparkles, Save
 } from 'lucide-react';
 import useAppStore from '../store/appStore';
 import useCustomerStore from '../store/customerStore';
@@ -16,7 +16,7 @@ import './Billing.css';
 const formatINR = (a) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(a || 0);
 
 export default function Billing() {
-  const { orders, markOrderPaid, fetchOrdersFromDB } = useAppStore();
+  const { orders, markOrderPaid, updateOrderBill, fetchOrdersFromDB } = useAppStore();
   const { customers, fetchCustomersFromDB } = useCustomerStore();
   const { shopInfo } = useSettingsStore();
   const { t } = useLanguageStore();
@@ -34,6 +34,7 @@ export default function Billing() {
   const [extraCharges, setExtraCharges] = useState(0);
   const [showThankYouModal, setShowThankYouModal] = useState(false);
   const [isSendingPdf, setIsSendingPdf] = useState(false);
+  const [isSavingBill, setIsSavingBill] = useState(false);
   const [pdfMsg, setPdfMsg] = useState(null);
 
   const handleSelectOrder = (order) => {
@@ -207,6 +208,35 @@ export default function Billing() {
                   <span className="billing__token-pill"><Tag size={12} /> Token #{activeInvoice.tokenNumber}</span>
                 </div>
                 <div className="billing__actions-right">
+                  <button
+                    type="button"
+                    className="billing__action-btn billing__action-btn--save"
+                    disabled={isSavingBill}
+                    onClick={async () => {
+                      if (!selectedInvoiceOrder || !activeInvoice) return;
+                      setIsSavingBill(true);
+                      setPdfMsg(null);
+                      try {
+                        await updateOrderBill(selectedInvoiceOrder, {
+                          items: activeInvoice.items,
+                          subtotal: activeInvoice.subtotal,
+                          discount: activeInvoice.discount,
+                          discountType: activeInvoice.discountType,
+                          discountValue: activeInvoice.discountValue,
+                          extraCharges: activeInvoice.extraCharges,
+                          paidAmount: activeInvoice.paid,
+                        });
+                        setPdfMsg({ success: true, text: 'Bill changes & updated discount saved to database successfully!' });
+                      } catch (err) {
+                        setPdfMsg({ success: false, text: err.message || 'Failed to save bill changes' });
+                      } finally {
+                        setIsSavingBill(false);
+                      }
+                    }}
+                  >
+                    <Save size={13} /> {isSavingBill ? 'Saving...' : 'Save Bill'}
+                  </button>
+
                   <button
                     type="button"
                     className="billing__action-btn"

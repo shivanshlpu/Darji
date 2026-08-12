@@ -155,6 +155,11 @@
   box-shadow: 0 0 0 1px rgba(201, 162, 75, 0.3);
 }
 
+.reports__card--discount {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+
 .reports__card-label {
   font-size: var(--text-xs);
   color: var(--text-secondary);
@@ -171,6 +176,11 @@
 .reports__card-val--danger { color: var(--color-danger); }
 .reports__card-val--warning { color: var(--color-warning); }
 .reports__card-val--gold { color: var(--color-gold-500); }
+.reports__card-val--discount { color: #d97706; }
+
+.reports__discount-row:hover {
+  background-color: #f8fafc !important;
+}
 
 .reports__card-sub {
   font-size: var(--text-xs);

@@ -15,16 +15,32 @@ export interface ReportPDFData {
   stats: {
     totalSales: number;
     totalBilled: number;
+    totalDiscounts?: number;
+    discountCount?: number;
     totalPending: number;
     totalExp: number;
     netProfit: number;
     marginPct: string | number;
   };
+  discountsLedger?: Array<{
+    orderNumber: string;
+    tokenNumber?: string;
+    customerName: string;
+    customerMobile?: string;
+    date: string;
+    subtotal: number;
+    discount: number;
+    discountType?: string;
+    discountValue?: number;
+    grandTotal: number;
+  }>;
   orders: Array<{
     orderNumber: string;
     tokenNumber?: string;
     customerName: string;
     date: string;
+    subtotal?: number;
+    discount?: number;
     grandTotal: number;
     paidAmount: number;
     pendingAmount: number;
@@ -53,6 +69,7 @@ export function generateReportPDFHTML(data: ReportPDFData): string {
 
   const orders = data.orders || [];
   const expenses = data.expenses || [];
+  const discountsLedger = data.discountsLedger || [];
 
   return `
 <!DOCTYPE html>
@@ -144,8 +161,8 @@ export function generateReportPDFHTML(data: ReportPDFData): string {
 
     .cards-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
       margin-bottom: 24px;
     }
 
@@ -153,11 +170,11 @@ export function generateReportPDFHTML(data: ReportPDFData): string {
       background: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: 8px;
-      padding: 12px 14px;
+      padding: 10px 12px;
     }
 
     .card-label {
-      font-size: 11px;
+      font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       color: #64748b;
@@ -165,12 +182,13 @@ export function generateReportPDFHTML(data: ReportPDFData): string {
     }
 
     .card-val {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 800;
       margin-top: 4px;
     }
 
     .val-sales { color: #166534; }
+    .val-disc { color: #d97706; }
     .val-exp { color: #991b1b; }
     .val-profit { color: #b45309; }
     .val-pending { color: #c2410c; }
@@ -273,29 +291,66 @@ export function generateReportPDFHTML(data: ReportPDFData): string {
   <!-- Summary Cards Grid -->
   <div class="cards-grid">
     <div class="card">
-      <span class="card-label">${isHi ? 'कुल प्राप्त आय' : 'Total Revenue Collected'}</span>
+      <span class="card-label">${isHi ? 'कुल प्राप्त आय' : 'Total Revenue'}</span>
       <p class="card-val val-sales">${formatINR(data.stats.totalSales)}</p>
       <small style="color: #64748b;">${isHi ? 'कुल बिलिंग' : 'Total Billed'}: ${formatINR(data.stats.totalBilled)}</small>
     </div>
 
+    <div class="card" style="background: #fffbeb; border-color: #fde68a;">
+      <span class="card-label">${isHi ? 'कुल डिस्काउंट दिया' : 'Total Discounts'}</span>
+      <p class="card-val val-disc">${formatINR(data.stats.totalDiscounts || 0)}</p>
+      <small style="color: #b45309;">${data.stats.discountCount || 0} ${isHi ? 'ऑर्डर्स' : 'orders'}</small>
+    </div>
+
     <div class="card">
-      <span class="card-label">${isHi ? 'कुल संचालन खर्चे' : 'Total Expenses'}</span>
+      <span class="card-label">${isHi ? 'कुल खर्चे' : 'Total Expenses'}</span>
       <p class="card-val val-exp">${formatINR(data.stats.totalExp)}</p>
       <small style="color: #64748b;">${expenses.length} ${isHi ? 'खर्चे' : 'expenses'}</small>
     </div>
 
     <div class="card">
-      <span class="card-label">${isHi ? 'शुद्ध लाभ (Net Profit)' : 'Net Profit'}</span>
+      <span class="card-label">${isHi ? 'शुद्ध लाभ' : 'Net Profit'}</span>
       <p class="card-val val-profit">${formatINR(data.stats.netProfit)}</p>
       <small style="color: #64748b;">${isHi ? 'मार्जिन' : 'Margin'}: ${data.stats.marginPct}%</small>
     </div>
 
     <div class="card">
-      <span class="card-label">${isHi ? 'कुल बकाया राशि' : 'Uncollected Pending'}</span>
+      <span class="card-label">${isHi ? 'कुल बकाया' : 'Uncollected Dues'}</span>
       <p class="card-val val-pending">${formatINR(data.stats.totalPending)}</p>
       <small style="color: #64748b;">${isHi ? 'सक्रिय ऑर्डर्स पर' : 'Active orders'}</small>
     </div>
   </div>
+
+  <!-- Customer Discount Ledger -->
+  ${discountsLedger.length > 0 ? `
+  <div class="section-title">
+    <span>🏷️ ${isHi ? 'ग्राहक डिस्काउंट लेजर विवरण' : 'Customer Discount Ledger'} (${discountsLedger.length})</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>${isHi ? 'तारीख' : 'DATE'}</th>
+        <th>${isHi ? 'ऑर्डर / टोकन #' : 'ORDER / TOKEN'}</th>
+        <th>${isHi ? 'ग्राहक का नाम' : 'CUSTOMER'}</th>
+        <th>${isHi ? 'मूल राशि (Subtotal)' : 'SUBTOTAL'}</th>
+        <th>${isHi ? 'डिस्काउंट राशि' : 'DISCOUNT'}</th>
+        <th>${isHi ? 'अंतिम कुल' : 'GRAND TOTAL'}</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${discountsLedger.map(d => `
+        <tr>
+          <td>${d.date}</td>
+          <td><strong>${d.orderNumber}</strong> (${d.tokenNumber || 'T-100'})</td>
+          <td>${d.customerName} ${d.customerMobile ? `(${d.customerMobile})` : ''}</td>
+          <td>${formatINR(d.subtotal)}</td>
+          <td style="color: #d97706; font-weight: 700;">- ${formatINR(d.discount)} ${d.discountType === 'percent' ? `(${d.discountValue}%)` : ''}</td>
+          <td style="color: #166534; font-weight: 700;">${formatINR(d.grandTotal)}</td>
+        </tr>
+      `).join('')}
+    </tbody>
+  </table>
+  ` : ''}
 
   <!-- Orders Table -->
   <div class="section-title">

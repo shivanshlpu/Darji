@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import {
   BarChart3, TrendingUp, TrendingDown, Download, Calendar,
-  PieChart as PieIcon, DollarSign, Users, FileSpreadsheet, FileText, Filter
+  PieChart as PieIcon, DollarSign, Users, FileSpreadsheet, FileText, Filter,
+  Tag, Percent, Eye, X
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -54,6 +55,7 @@ export default function Reports() {
   const [period, setPeriod] = useState('month'); // today | week | month | year | custom | all
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(new Date().toISOString().slice(0, 10));
+  const [selectedDiscountModalOrder, setSelectedDiscountModalOrder] = useState(null);
 
   useEffect(() => {
     if (isAmountHidden) {
@@ -118,6 +120,8 @@ export default function Reports() {
   const stats = useMemo(() => {
     const totalSales = filteredOrders.reduce((s, o) => s + (o.paidAmount || 0), 0);
     const totalBilled = filteredOrders.reduce((s, o) => s + (o.subtotal || 0), 0);
+    const totalDiscounts = filteredOrders.reduce((s, o) => s + (o.discount || 0), 0);
+    const discountCount = filteredOrders.filter(o => (o.discount || 0) > 0).length;
     const totalPending = filteredOrders.reduce((s, o) => s + (o.pendingAmount || 0), 0);
     const totalExp = filteredExpenses.reduce((s, e) => s + (e.amount || 0), 0);
 
@@ -127,12 +131,18 @@ export default function Reports() {
     return {
       totalSales,
       totalBilled,
+      totalDiscounts,
+      discountCount,
       totalPending,
       totalExp,
       netProfit,
       marginPct,
     };
   }, [filteredOrders, filteredExpenses]);
+
+  const discountOrders = useMemo(() => {
+    return filteredOrders.filter(o => (o.discount || 0) > 0);
+  }, [filteredOrders]);
 
   // Expense breakdown chart data
   const expenseChartData = useMemo(() => {
@@ -196,10 +206,24 @@ export default function Reports() {
         tokenNumber: o.tokenNumber,
         customerName: o.customerName,
         date: formatDateDMY(o.createdAt || o.orderDate),
+        subtotal: o.subtotal || 0,
+        discount: o.discount || 0,
         grandTotal: o.grandTotal || o.subtotal,
         paidAmount: o.paidAmount || 0,
         pendingAmount: o.pendingAmount || 0,
         status: o.status,
+      })),
+      discountsLedger: discountOrders.map(o => ({
+        orderNumber: o.orderNumber,
+        tokenNumber: o.tokenNumber,
+        customerName: o.customerName,
+        customerMobile: o.customerMobile || '',
+        date: formatDateDMY(o.createdAt || o.orderDate),
+        subtotal: o.subtotal || 0,
+        discount: o.discount || 0,
+        discountType: o.discountType || 'amount',
+        discountValue: o.discountValue || o.discount || 0,
+        grandTotal: o.grandTotal || Math.max(0, (o.subtotal || 0) - (o.discount || 0)),
       })),
       expenses: filteredExpenses.map(e => ({
         date: formatDateDMY(e.date || e.createdAt),
@@ -270,11 +294,17 @@ export default function Reports() {
       </div>
 
       {/* Financial Summary Cards */}
-      <div className="reports__summary-grid">
+      <div className="reports__summary-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
         <div className="reports__card">
           <span className="reports__card-label">{t('totalRevenue', 'Total Revenue Collected')}</span>
           <p className="reports__card-val reports__card-val--success">{formatAmount(stats.totalSales)}</p>
           <span className="reports__card-sub">{language === 'hi' ? 'कुल बिलिंग:' : 'Total Billed:'} {formatAmount(stats.totalBilled)}</span>
+        </div>
+
+        <div className="reports__card reports__card--discount">
+          <span className="reports__card-label">{language === 'hi' ? 'कुल डिस्काउंट दिया' : 'Total Discounts Given'}</span>
+          <p className="reports__card-val reports__card-val--discount">{formatAmount(stats.totalDiscounts)}</p>
+          <span className="reports__card-sub">{stats.discountCount} {language === 'hi' ? 'ऑर्डर्स पर छूट' : 'orders discounted'}</span>
         </div>
 
         <div className="reports__card">
@@ -358,6 +388,192 @@ export default function Reports() {
           </div>
         </div>
       </div>
+
+      {/* Customer Discount Tracker Section */}
+      <div className="reports__discount-tracker-section" style={{ marginTop: '12px' }}>
+        <div className="reports__chart-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', padding: '8px', borderRadius: '8px', display: 'flex' }}>
+                <Tag color="#d97706" size={20} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                  {language === 'hi' ? '🏷️ ग्राहक डिस्काउंट ट्रैकिंग' : '🏷️ Customer Discount Tracker'}
+                </h3>
+                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  {language === 'hi' ? 'किस ग्राहक को कितना डिस्काउंट मिला उसका विवरण' : 'Track who received discounts and view detailed item breakdown'}
+                </p>
+              </div>
+            </div>
+            <span style={{ fontSize: '12px', fontWeight: 600, background: '#fef3c7', color: '#92400e', padding: '4px 12px', borderRadius: '20px', border: '1px solid #fde68a' }}>
+              {discountOrders.length} {language === 'hi' ? 'ग्राहकों को डिस्काउंट दिया गया' : 'discounted orders'}
+            </span>
+          </div>
+
+          <div className="reports__discount-table-wrapper" style={{ overflowX: 'auto' }}>
+            {discountOrders.length === 0 ? (
+              <div style={{ padding: '36px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                <Tag size={40} color="#cbd5e1" style={{ marginBottom: '8px' }} />
+                <p style={{ fontWeight: 600, fontSize: '14px', margin: 0 }}>
+                  {language === 'hi' ? 'चुनी गई अवधि में किसी ग्राहक को डिस्काउंट नहीं दिया गया।' : 'No customer discounts recorded for the selected date period.'}
+                </p>
+              </div>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', textAlign: 'left', color: '#475569', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    <th style={{ padding: '10px 14px' }}>{language === 'hi' ? 'ग्राहक का नाम' : 'Customer Name'}</th>
+                    <th style={{ padding: '10px 14px' }}>{language === 'hi' ? 'ऑर्डर / टोकन #' : 'Order / Token'}</th>
+                    <th style={{ padding: '10px 14px' }}>{language === 'hi' ? 'तारीख' : 'Date'}</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'right' }}>{language === 'hi' ? 'मूल राशि (Subtotal)' : 'Subtotal'}</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'right' }}>{language === 'hi' ? 'डिस्काउंट राशि' : 'Discount Given'}</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'right' }}>{language === 'hi' ? 'अंतिम राशि (Grand Total)' : 'Grand Total'}</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center' }}>{language === 'hi' ? 'विवरण' : 'Action'}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {discountOrders.map((o) => {
+                    const sub = o.subtotal || 0;
+                    const disc = o.discount || 0;
+                    const discTypeStr = o.discountType === 'percent' ? `(${o.discountValue}%)` : '';
+                    const finalTotal = o.grandTotal || Math.max(0, sub - disc);
+
+                    return (
+                      <tr
+                        key={o._id}
+                        style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}
+                        className="reports__discount-row"
+                        onClick={() => setSelectedDiscountModalOrder(o)}
+                      >
+                        <td style={{ padding: '12px 14px', fontWeight: 600 }}>
+                          <div style={{ color: 'var(--text-primary)' }}>{o.customerName}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 400 }}>{o.customerMobile || o.customerPhone || ''}</div>
+                        </td>
+                        <td style={{ padding: '12px 14px', fontFamily: 'monospace', fontWeight: 600, color: '#2563eb' }}>
+                          {o.orderNumber} ({o.tokenNumber || 'T-100'})
+                        </td>
+                        <td style={{ padding: '12px 14px', color: 'var(--text-secondary)' }}>
+                          {formatDateDMY(o.createdAt || o.orderDate)}
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-secondary)' }}>
+                          {formatAmount(sub)}
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#d97706' }}>
+                          - {formatAmount(disc)} <span style={{ fontSize: '11px', color: '#b45309', fontWeight: 500 }}>{discTypeStr}</span>
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#166534' }}>
+                          {formatAmount(finalTotal)}
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            style={{
+                              background: '#eff6ff',
+                              border: '1px solid #bfdbfe',
+                              color: '#1d4ed8',
+                              borderRadius: '6px',
+                              padding: '5px 12px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedDiscountModalOrder(o);
+                            }}
+                          >
+                            <Eye size={13} /> {language === 'hi' ? 'देखें' : 'View Details'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Customer Discount Details Modal */}
+      {selectedDiscountModalOrder && (
+        <div className="modal-overlay" onClick={() => setSelectedDiscountModalOrder(null)}>
+          <div className="modal animate-scale-in" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '560px' }}>
+            <div className="modal__header">
+              <h2>🏷️ Discount Breakdown - {selectedDiscountModalOrder.customerName}</h2>
+              <button className="modal__close" onClick={() => setSelectedDiscountModalOrder(null)}><X size={20} /></button>
+            </div>
+            <div className="modal__body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '15px', color: '#0f172a', fontWeight: 700 }}>{selectedDiscountModalOrder.customerName}</h4>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+                    Order #{selectedDiscountModalOrder.orderNumber} • Token #{selectedDiscountModalOrder.tokenNumber || 'T-100'}
+                  </p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '11px', color: '#64748b' }}>Order Date</span>
+                  <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>{formatDateDMY(selectedDiscountModalOrder.createdAt || selectedDiscountModalOrder.orderDate)}</p>
+                </div>
+              </div>
+
+              <div>
+                <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#475569', marginBottom: '8px' }}>Garment Items Included:</h4>
+                <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                  {(selectedDiscountModalOrder.items || []).map((it, idx) => (
+                    <div key={idx} style={{ padding: '10px 14px', borderBottom: idx < (selectedDiscountModalOrder.items || []).length - 1 ? '1px solid #f1f5f9' : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
+                      <div>
+                        <span style={{ fontWeight: 600, color: '#1e293b' }}>{it.name}</span>
+                        <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '6px' }}>({it.category || 'Garment'})</span>
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>Qty: {it.qty} × ₹{it.price}</div>
+                      </div>
+                      <strong style={{ color: '#0f172a' }}>{formatAmount((it.qty || 1) * (it.price || 0))}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '8px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#475569' }}>
+                  <span>Subtotal Amount:</span>
+                  <span>{formatAmount(selectedDiscountModalOrder.subtotal)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 700, color: '#b45309' }}>
+                  <span>Discount Given {selectedDiscountModalOrder.discountType === 'percent' ? `(${selectedDiscountModalOrder.discountValue}%)` : ''}:</span>
+                  <span>- {formatAmount(selectedDiscountModalOrder.discount)}</span>
+                </div>
+                {selectedDiscountModalOrder.extraCharges > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#475569' }}>
+                    <span>Extra Charges:</span>
+                    <span>+ {formatAmount(selectedDiscountModalOrder.extraCharges)}</span>
+                  </div>
+                )}
+                <div style={{ borderTop: '1px dashed #fde68a', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 800, color: '#166534' }}>
+                  <span>Final Grand Total:</span>
+                  <span>{formatAmount(selectedDiscountModalOrder.grandTotal || Math.max(0, selectedDiscountModalOrder.subtotal - selectedDiscountModalOrder.discount))}</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', background: '#f1f5f9', padding: '10px 14px', borderRadius: '6px', fontSize: '13px' }}>
+                <span>Paid So Far: <strong>{formatAmount(selectedDiscountModalOrder.paidAmount)}</strong></span>
+                <span style={{ color: selectedDiscountModalOrder.pendingAmount > 0 ? '#dc2626' : '#166534', fontWeight: 700 }}>
+                  Remaining Balance: {formatAmount(selectedDiscountModalOrder.pendingAmount)}
+                </span>
+              </div>
+
+              <div className="modal__actions">
+                <button type="button" className="modal__btn modal__btn--primary" onClick={() => setSelectedDiscountModalOrder(null)}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

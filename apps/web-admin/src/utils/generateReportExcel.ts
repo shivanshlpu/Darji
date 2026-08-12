@@ -55,12 +55,45 @@ export function exportReportExcel(data: ReportPDFData) {
         <tbody>
           <tr><td>Total Revenue Collected</td><td class="amount paid">₹ ${data.stats.totalSales.toLocaleString('en-IN')}</td></tr>
           <tr><td>Total Billed Amount</td><td class="amount">₹ ${data.stats.totalBilled.toLocaleString('en-IN')}</td></tr>
+          <tr><td>Total Discounts Given</td><td class="amount" style="color: #D97706;">₹ ${(data.stats.totalDiscounts || 0).toLocaleString('en-IN')}</td></tr>
           <tr><td>Total Operating Expenses</td><td class="amount pending">₹ ${data.stats.totalExp.toLocaleString('en-IN')}</td></tr>
           <tr class="total-row"><td>Net Profit (Sales - Expenses)</td><td class="amount" style="color: ${data.stats.netProfit >= 0 ? '#16A34A' : '#DC2626'}">₹ ${data.stats.netProfit.toLocaleString('en-IN')}</td></tr>
           <tr><td>Profit Margin (%)</td><td class="amount">${data.stats.marginPct}%</td></tr>
           <tr><td>Uncollected Outstanding Dues</td><td class="amount pending">₹ ${data.stats.totalPending.toLocaleString('en-IN')}</td></tr>
         </tbody>
       </table>
+
+      ${(data.discountsLedger && data.discountsLedger.length > 0) ? `
+      <div class="section-title">🏷️ CUSTOMER DISCOUNT LEDGER (${data.discountsLedger.length} Discounted Orders)</div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Order #</th>
+            <th>Token #</th>
+            <th>Customer Name</th>
+            <th>Date (DD-MM-YYYY)</th>
+            <th style="text-align: right;">Subtotal (₹)</th>
+            <th style="text-align: right;">Discount (₹)</th>
+            <th style="text-align: right;">Grand Total (₹)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.discountsLedger.map((d, idx) => `
+            <tr>
+              <td>${idx + 1}</td>
+              <td><b>${d.orderNumber}</b></td>
+              <td>${d.tokenNumber || '-'}</td>
+              <td>${d.customerName} ${d.customerMobile ? `(${d.customerMobile})` : ''}</td>
+              <td>${d.date}</td>
+              <td class="amount">₹ ${d.subtotal.toLocaleString('en-IN')}</td>
+              <td class="amount" style="color: #D97706;">- ₹ ${d.discount.toLocaleString('en-IN')} ${d.discountType === 'percent' ? `(${d.discountValue}%)` : ''}</td>
+              <td class="amount paid">₹ ${d.grandTotal.toLocaleString('en-IN')}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      ` : ''}
 
       <div class="section-title">📋 ORDERS & SALES LEDGER (${data.orders.length} Orders)</div>
       <table>

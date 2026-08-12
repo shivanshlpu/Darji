@@ -575,6 +575,12 @@
     border-color: #d97706 !important;
   }
 
+  .billing__action-btn--save {
+    background: #2563eb !important;
+    color: #ffffff !important;
+    border-color: #2563eb !important;
+  }
+
   .billing__item-rate-row {
     flex-wrap: wrap !important;
     gap: 8px !important;

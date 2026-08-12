@@ -183,6 +183,9 @@ export default function Orders() {
     const payload = {
       items: finalEditItems,
       subtotal,
+      discount: editingOrder.discount || 0,
+      extraCharges: editingOrder.extraCharges || 0,
+      grandTotal: totalAmount,
       totalAmount,
       advancePaid,
       paidAmount: advancePaid,
@@ -869,18 +872,26 @@ export default function Orders() {
     };
   }, [activeBillOrder, activeBill, shopInfo, customers]);
 
-  const handleApplyBillPayment = () => {
+  const handleApplyBillPayment = async () => {
     if (!activeBillOrder || !activeBill) return;
 
-    updateOrderBill(activeBillOrder._id, {
-      items: activeBill.items,
-      subtotal: activeBill.subtotal,
-      paidAmount: activeBill.paidAmount,
-      discount: activeBill.discount,
-      extraCharges: activeBill.extraCharges,
-    });
+    try {
+      await updateOrderBill(activeBillOrder._id, {
+        items: activeBill.items,
+        subtotal: activeBill.subtotal,
+        paidAmount: activeBill.paidAmount,
+        discount: activeBill.discount,
+        discountType: activeBill.discountType,
+        discountValue: activeBill.discountValue,
+        extraCharges: activeBill.extraCharges,
+      });
 
-    setAdditionalPayment(0);
+      setAdditionalPayment(0);
+      setToastMsg('✅ Bill & Payment changes saved to database!');
+      setTimeout(() => setToastMsg(''), 4000);
+    } catch (err) {
+      console.error('[Apply Bill Error]:', err);
+    }
   };
 
   const termsList = useMemo(() => {
