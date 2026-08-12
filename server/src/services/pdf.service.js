@@ -48,7 +48,7 @@ function buildInvoiceHTML(order = {}, shopInfo = {}) {
     : [{ name: order.garmentType || 'Custom Designer Suit', qty: order.quantity || 1, price: order.totalAmount || order.amount || 1200 }];
 
   const customerName = order.customerName || order.customer?.name || 'Customer';
-  const customerPhone = order.customerMobile || order.customerPhone || order.customer?.phone || '9009149694';
+  const customerPhone = order.customerMobile || order.customerPhone || order.customer?.phone || process.env.ADMIN_PHONE || '9000000000';
   const customerAddress = order.customerAddress || order.customer?.address || 'MEDICAL COLLEGE SDL';
 
   const invoiceNo = (order.invoiceNo || order.orderNumber || `INV-${order._id?.toString().slice(-6).toUpperCase() || '0001'}`).replace('ORD-', 'INV-');

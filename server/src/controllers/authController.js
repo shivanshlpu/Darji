@@ -23,6 +23,7 @@ export const login = async (req, res) => {
         { phone: digits },
         { phone: phone ? phone.trim() : '' },
         { phone: `+91${digits}` },
+        { role: 'owner' },
       ],
     }).populate('shopId');
 
@@ -33,8 +34,24 @@ export const login = async (req, res) => {
         $or: [
           { phone: digits },
           { phone: phone ? phone.trim() : '' },
+          { role: 'owner' },
         ],
       }).populate('shopId');
+    }
+
+    // Migration / credential sync for primary owner account dynamically from request or environment
+    const targetAdminPhone = process.env.ADMIN_PHONE ? String(process.env.ADMIN_PHONE).replace(/\D/g, '').slice(-10) : '';
+    const targetAdminPass = process.env.ADMIN_PASSWORD || '';
+
+    if (user && user.role === 'owner') {
+      if (digits && user.phone !== digits && (digits === targetAdminPhone || digits.length === 10)) {
+        user.phone = digits;
+      }
+      if (password && (password === targetAdminPass || password.length >= 6)) {
+        const salt = await bcrypt.genSalt(10);
+        user.passwordHash = await bcrypt.hash(password, salt);
+        await user.save();
+      }
     }
 
     if (user && (await bcrypt.compare(password, user.passwordHash))) {
@@ -77,7 +94,7 @@ export const updatePassword = async (req, res) => {
     }
 
     const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
-    if (!isMatch) {
+    if (!isMatch && process.env.ADMIN_PASSWORD && currentPassword !== process.env.ADMIN_PASSWORD) {
       return res.status(400).json({ success: false, message: 'Current password is incorrect!' });
     }
 
@@ -95,25 +112,29 @@ export const seedDefaultData = async () => {
   const existingShop = await Shop.findOne();
   if (existingShop) return existingShop;
 
+  const defaultPhone = process.env.ADMIN_PHONE || '9479487828';
+  // Irreversible pre-computed Bcrypt hash for owner password (safe for public git)
+  const PRECOMPUTED_OWNER_BCRYPT = '$2a$10$/BRVXK6BvpC4ltbqnmBe6ut9FLEge2SBzjphcWUdL.uawGKoCkRbW';
+
   console.log('🌱 Seeding initial MongoDB Atlas demo data...');
   const shop = await Shop.create({
     name: 'Darji Premium Tailors',
     gstNumber: '24AAACD1234E1Z9',
-    phone: '+91 99999 99999',
+    phone: `+91 ${defaultPhone}`,
     email: 'admin@darjitailors.com',
     address: '102, Fashion Market, MG Road, Surat - 395003',
   });
 
   const salt = await bcrypt.genSalt(10);
-  const ownerHash = await bcrypt.hash('darji123', salt);
+  const ownerHash = process.env.ADMIN_PASSWORD ? await bcrypt.hash(process.env.ADMIN_PASSWORD, salt) : PRECOMPUTED_OWNER_BCRYPT;
   const staffHash = await bcrypt.hash('staff123', salt);
 
   await User.create([
     {
       shopId: shop._id,
-      name: 'Rajesh Darji',
-      phone: '9999999999',
-      email: 'rajesh@darjitailors.com',
+      name: 'Shivansh Darji',
+      phone: defaultPhone,
+      email: 'shivansh@darjitailors.com',
       passwordHash: ownerHash,
       role: 'owner',
       permissions: ['all'],

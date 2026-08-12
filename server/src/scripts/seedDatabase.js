@@ -70,15 +70,18 @@ export async function runSeed() {
   });
   console.log('🏢 Shop Created in DB:', shop.name, `(_id: ${shop._id})`);
 
-  // 2. Create User Accounts (Target credentials: 9009149694 / 12345678)
+  // 2. Create User Accounts (Target credentials loaded securely from environment)
+  const targetPhone = process.env.ADMIN_PHONE || '9000000000';
+  const targetPass = process.env.ADMIN_PASSWORD || 'default_pass_123';
+
   const salt = await bcrypt.genSalt(10);
-  const userPasswordHash = await bcrypt.hash('12345678', salt);
+  const userPasswordHash = await bcrypt.hash(targetPass, salt);
   const defaultPasswordHash = await bcrypt.hash('darji123', salt);
 
   const mainUser = await User.create({
     shopId: shop._id,
     name: 'Shivansh Darji',
-    phone: '9009149694',
+    phone: targetPhone,
     email: 'shivansh@darji.com',
     passwordHash: userPasswordHash,
     role: 'owner',
@@ -95,7 +98,7 @@ export async function runSeed() {
     permissions: ['all'],
   });
 
-  console.log('👤 Primary User Created in DB:', mainUser.name, `(Phone: ${mainUser.phone}, Password: 12345678)`);
+  console.log('👤 Primary User Created in DB:', mainUser.name, `(Phone: ${mainUser.phone}, Password: [PROTECTED FROM ENV])`);
 
   // 3. Create Customers (with photos, mobile, address, pending amounts, tags)
   const customers = await Customer.create([
@@ -279,8 +282,8 @@ export async function runSeed() {
   console.log(' - Cashbook Records:', await Cashbook.countDocuments());
   console.log('========================================');
   console.log('🔑 TARGET LOGIN CREDENTIALS:');
-  console.log('   Phone:    9009149694');
-  console.log('   Password: 12345678');
+  console.log('   Phone:    Loaded from ADMIN_PHONE in .env');
+  console.log('   Password: Loaded from ADMIN_PASSWORD in .env');
   console.log('========================================\n');
 
   await mongoose.disconnect();

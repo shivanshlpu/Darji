@@ -25,7 +25,7 @@ export default function SettingsPage() {
   const [passwordError, setPasswordError] = useState(null);
 
   // Live WhatsApp Test Message Sender State
-  const [testMobile, setTestMobile] = useState('9009149694');
+  const [testMobile, setTestMobile] = useState('');
   const [testMsgText, setTestMsgText] = useState('Hello Shivansh! This is a live test message from Darji ERP.');
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [testSendResult, setTestSendResult] = useState(null);
@@ -609,7 +609,7 @@ export default function SettingsPage() {
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
                       <input
                         type="text"
-                        placeholder="Mobile Number (e.g. 9009149694)"
+                        placeholder="Mobile Number (e.g. 9876543210)"
                         value={testMobile}
                         onChange={(e) => setTestMobile(e.target.value)}
                         style={{ width: '180px', padding: '8px 12px', fontSize: '13px', borderRadius: '6px', border: '1px solid #cbd5e1' }}

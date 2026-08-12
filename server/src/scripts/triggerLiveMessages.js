@@ -1,7 +1,7 @@
 const API_URL = 'http://localhost:5000/api/v1/whatsapp/test';
 
 async function sendTestFlow() {
-  const targetMobile = '9009149694';
+  const targetMobile = process.env.ADMIN_PHONE || '9000000000';
   const customerName = 'Shivansh Tiwari';
 
   const messages = [

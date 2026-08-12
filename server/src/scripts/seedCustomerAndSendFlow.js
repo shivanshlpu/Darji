@@ -30,7 +30,7 @@ async function runSeedAndWhatsAppFlow() {
   if (!shop) {
     shop = await Shop.create({
       name: 'Darji Premium Tailors',
-      phone: '9009149694',
+      phone: process.env.ADMIN_PHONE || '9000000000',
       email: 'contact@darjitailors.com',
       ownerId: new mongoose.Types.ObjectId(),
       address: '102, Fashion Market, MG Road, Surat',
@@ -38,7 +38,7 @@ async function runSeedAndWhatsAppFlow() {
   }
 
   const shopId = shop._id;
-  const targetMobile = '9009149694';
+  const targetMobile = process.env.ADMIN_PHONE || '9000000000';
   const customerName = 'Shivansh Tiwari';
 
   console.log(`\n======================================================`);
@@ -111,7 +111,7 @@ async function runSeedAndWhatsAppFlow() {
 
   console.log(`✅ Order Created: Token=${order.tokenNumber}, Total=₹${order.totalAmount}`);
 
-  // 4. Send Live WhatsApp Messages Flow to Shivansh Tiwari (9009149694)
+  // 4. Send Live WhatsApp Messages Flow to Owner
   console.log(`\n======================================================`);
   console.log(`📲 TRIGGERING LIVE WHATSAPP FLOW TO ${targetMobile}...`);
   console.log(`======================================================\n`);
