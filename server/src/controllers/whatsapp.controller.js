@@ -107,21 +107,12 @@ export const sendInvoicePDF = async (req, res) => {
     const advancePaid = Number(targetOrder.paidAmount !== undefined ? targetOrder.paidAmount : (targetOrder.advancePaid !== undefined ? targetOrder.advancePaid : (targetOrder.paid !== undefined ? targetOrder.paid : (targetOrder.advance || 0))));
     const balanceDue = Number(targetOrder.balanceDue !== undefined ? targetOrder.balanceDue : (targetOrder.remaining !== undefined ? targetOrder.remaining : (targetOrder.pendingAmount !== undefined ? targetOrder.pendingAmount : Math.max(0, totalAmount - advancePaid))));
 
-    const shopName = shopConfig.name || 'DARJI';
-    const shopPhone = shopConfig.phone || shopConfig.ownerMobile || '';
+    const shopName = shopConfig.name || 'Darji';
+    const shopPhone = shopConfig.phone || shopConfig.ownerMobile || '+919479487828, +917000621972';
+    const reviewLink = shopConfig.reviewLink?.trim() || 'https://g.page/r/CVIGyGz2VDeQEBM/review';
+    const reviewUrl = /^https?:\/\//i.test(reviewLink) ? reviewLink : `https://${reviewLink}`;
 
-    let captionText = `Namaste ${customerName} ji! 🙏\nAttached is your official PDF Invoice #${invoiceNo} from *${shopName}*.\n\nTotal: ₹${totalAmount.toLocaleString('en-IN')}\nAdvance Paid: ₹${advancePaid.toLocaleString('en-IN')}\nBalance Due: ₹${balanceDue.toLocaleString('en-IN')}\n`;
-
-    if (shopConfig.reviewLink) {
-      const rawReview = shopConfig.reviewLink.trim();
-      const reviewUrl = /^https?:\/\//i.test(rawReview) ? rawReview : `https://${rawReview}`;
-      captionText += `\n⭐ *Rate Your Experience / Leave Feedback:* \n${reviewUrl}\n`;
-    }
-
-    captionText += `\nThank you for choosing *${shopName}*!`;
-    if (shopPhone) {
-      captionText += `\n📞 Contact: ${shopPhone}`;
-    }
+    let captionText = `Namaste ${customerName} ji! 🙏\nAttached is your official PDF Invoice #${invoiceNo} from *${shopName}*.\n\nTotal: ₹${totalAmount.toLocaleString('en-IN')}\nAdvance Paid: ₹${advancePaid.toLocaleString('en-IN')}\nBalance Due: ₹${balanceDue.toLocaleString('en-IN')}\n\n⭐ *Rate Your Experience / Leave Feedback:* \n${reviewUrl}\n\nThank you for choosing *${shopName}*!\n📞 Contact: ${shopPhone}`;
 
     // Send PDF document via WhatsApp Baileys Engine
     const result = await sendWhatsappMessage(targetMobile, captionText, pdfBuffer, req.user?.id, fileName);
@@ -150,8 +141,9 @@ export const sendPaymentReminder = async (req, res) => {
     const customerName = targetOrder?.customerName || targetOrder?.customer?.name || 'Customer';
     const pendingAmount = targetOrder?.balanceDue || targetOrder?.remaining || targetOrder?.pendingAmount || targetOrder?.grandTotal || 0;
     const tokenStr = targetOrder?.tokenNumber || targetOrder?.orderNumber || 'Order';
+    const shopPhone = '+919479487828, +917000621972';
 
-    const text = `🧾 *DARJI — PAYMENT REMINDER* 🧾\n\nNamaste *${customerName} ji*! 🙏\nThis is a gentle reminder regarding your pending balance of *₹${pendingAmount.toLocaleString('en-IN')}* for order *${tokenStr}* at *DARJI*.\n\nPlease clear the pending amount at your earliest convenience or upon pickup.\n\n📍 Shop Address: 80/LIG 1ST New Housing Board Colony, Shahdol (M.P.)\n📞 Contact: 7828962210, 7000621972\n\nThank you for choosing *DARJI*!`;
+    const text = `🧾 *DARJI — PAYMENT REMINDER* 🧾\n\nNamaste *${customerName} ji*! 🙏\nThis is a gentle reminder regarding your pending balance of *₹${pendingAmount.toLocaleString('en-IN')}* for order *${tokenStr}* at *DARJI*.\n\nPlease clear the pending amount at your earliest convenience or upon pickup.\n\n📍 Shop Address: 80/LIG 1ST New Housing Board Colony, Shahdol (M.P.) 484001\n📞 Contact: ${shopPhone}\n\nThank you for choosing *Darji*!`;
 
     const result = await sendWhatsappMessage(targetMobile, text, null, req.user?.id);
     res.json({ success: true, message: `Payment reminder sent to +91 ${targetMobile}!`, ...result });
@@ -168,14 +160,19 @@ export const getTemplates = async (req, res) => {
       // Seed initial default templates
       templates = await WhatsappTemplate.create([
         {
-          name: 'ORDER_READY',
-          content: 'Dear {{customerName}}, your order {{tokenNumber}} is ready for pickup at DARJI! Total bill: ₹{{amount}}.',
-          placeholders: ['customerName', 'tokenNumber', 'amount'],
+          name: 'ORDER_REGISTERED',
+          content: '✨ *DARJI — NEW ORDER REGISTERED* ✨\n\nDear *{{customerName}} ji*,\nYour order *{{tokenNumber}}* ({{orderNumber}}) has been registered!\n\n📋 *Register Details*:\n• Items: {{items}}\n\n⏳ Expected Delivery: {{deliveryDays}} Days ({{deliveryDate}})\n\n📍 Address: 80/LIG 1ST New Housing Board Colony, Shahdol (M.P.) 484001\n📞 Contact: +919479487828, +917000621972\n\nThank you for choosing *Darji*!',
+          placeholders: ['customerName', 'tokenNumber', 'orderNumber', 'items', 'deliveryDays', 'deliveryDate'],
         },
         {
-          name: 'PAYMENT_REMINDER',
-          content: 'Namaste {{customerName}}, a pending payment of ₹{{pendingAmount}} is due for order {{tokenNumber}}. Please collect your garment.',
-          placeholders: ['customerName', 'pendingAmount', 'tokenNumber'],
+          name: 'ORDER_READY',
+          content: '🧵 *DARJI — ORDER READY FOR PICKUP* 🧵\n\nDear *{{customerName}} ji*,\nYour order *{{tokenNumber}}* is completely ready! Please come to collect it at your earliest convenience.\n\n\n📍 Address: 80/LIG 1ST New Housing Board Colony, Shahdol (M.P.) 484001\n🗺️ Location Map: https://maps.app.goo.gl/wGwLLTRwZU4JuF3AA\n📞 Contact: +919479487828, +917000621972\n\nThank you for choosing *Darji*!',
+          placeholders: ['customerName', 'tokenNumber'],
+        },
+        {
+          name: 'INVOICE_BILL',
+          content: 'Namaste {{customerName}} ji! 🙏\nAttached is your official PDF Invoice #{{invoiceNo}} from *Darji*.\n\nTotal: ₹{{totalAmount}}\nAdvance Paid: ₹{{advancePaid}}\nBalance Due: ₹{{balanceDue}}\n\n⭐ *Rate Your Experience / Leave Feedback:* \nhttps://g.page/r/CVIGyGz2VDeQEBM/review\n\nThank you for choosing *Darji*!\n📞 Contact: +919479487828, +917000621972',
+          placeholders: ['customerName', 'invoiceNo', 'totalAmount', 'advancePaid', 'balanceDue'],
         },
       ]);
     }

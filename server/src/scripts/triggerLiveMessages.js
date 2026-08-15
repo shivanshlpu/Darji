@@ -6,20 +6,20 @@ async function sendTestFlow() {
 
   const messages = [
     {
-      title: '1. Order Booked Confirmation',
-      text: `✨ *DARJI — ORDER BOOKED* ✨\n\nDear *${customerName} ji*,\nYour order *T-106* for Custom Designer Suit has been successfully created!\n\n💰 Total Amount: ₹5,500\n💵 Advance Paid: ₹2,000\n📌 Balance Due: ₹3,500\n📅 Target Delivery: 12-08-2026\n\nThank you for choosing *DARJI*!`,
+      title: '1. Order Registered Confirmation',
+      text: `✨ *DARJI — NEW ORDER REGISTERED* ✨\n\nDear *${customerName} ji*,\nYour order *T-103* (ORD-2026-002027) has been registered!\n\n📋 *Register Details*:\n• Items: 1x Top Wear\n\n⏳ Expected Delivery: 7 Days (17/08/2026)\n\n📍 Address: 80/LIG 1ST New Housing Board Colony, Shahdol (M.P.) 484001\n📞 Contact: +919479487828, +917000621972\n\nThank you for choosing *Darji*!`,
     },
     {
-      title: '2. Garment Ready for Pickup Alert',
-      text: `🧵 *DARJI — GARMENT READY FOR PICKUP* 🧵\n\nDear *${customerName} ji*,\nGreat news! Your Custom Designer Suit (Order *T-106*) is completely ready for pickup.\n\n📍 Shop Address: 80/LIG 1ST New Housing Board Colony, Shahdol (M.P.)\n🗺️ Location Map: https://maps.app.goo.gl/wGwLLTRwZU4JuF3AA\n📞 Call/WhatsApp: 7828962210, 7000621972\n\nThank you for choosing *DARJI*!`,
+      title: '2. Order Ready for Pickup Alert',
+      text: `🧵 *DARJI — ORDER READY FOR PICKUP* 🧵\n\nDear *${customerName} ji*,\nYour order *T-103* is completely ready! Please come to collect it at your earliest convenience.\n\n\n📍 Address: 80/LIG 1ST New Housing Board Colony, Shahdol (M.P.) 484001\n🗺️ Location Map: https://maps.app.goo.gl/wGwLLTRwZU4JuF3AA\n📞 Contact: +919479487828, +917000621972\n\nThank you for choosing *Darji*!`,
     },
     {
-      title: '3. Payment Receipt & Reminder',
-      text: `🧾 *DARJI — PAYMENT REMINDER* 🧾\n\nNamaste *${customerName} ji*! 🙏\nThis is a gentle reminder regarding your pending balance of *₹3,500* at *DARJI*.\n\nPlease clear the pending amount at your earliest convenience or upon pickup.\n\n📍 Shop Address: 80/LIG 1ST New Housing Board Colony, Shahdol (M.P.)\n🗺️ Location Map: https://maps.app.goo.gl/wGwLLTRwZU4JuF3AA\n📞 Contact: 7828962210, 7000621972\n\nThank you for choosing *DARJI*!`,
+      title: '3. Payment Invoice Message',
+      text: `Namaste ${customerName} ji! 🙏\nAttached is your official PDF Invoice #INV-0001 from *Darji*.\n\nTotal: ₹550\nAdvance Paid: ₹200\nBalance Due: ₹350\n\n⭐ *Rate Your Experience / Leave Feedback:* \nhttps://g.page/r/CVIGyGz2VDeQEBM/review\n\nThank you for choosing *Darji*!\n📞 Contact: +919479487828, +917000621972`,
     },
     {
-      title: '4. Digital Tax Invoice',
-      text: `📄 *DARJI — DIGITAL TAX INVOICE*\n\nInvoice #INV-2026-000106 generated for *${customerName}*.\nView your digital receipt and warranty details at *DARJI*.\nHave a wonderful day!`,
+      title: '4. Payment Reminder',
+      text: `🧾 *DARJI — PAYMENT REMINDER* 🧾\n\nNamaste *${customerName} ji*! 🙏\nThis is a gentle reminder regarding your pending balance of *₹350* for order *T-103* at *DARJI*.\n\nPlease clear the pending amount at your earliest convenience or upon pickup.\n\n📍 Shop Address: 80/LIG 1ST New Housing Board Colony, Shahdol (M.P.) 484001\n📞 Contact: +919479487828, +917000621972\n\nThank you for choosing *Darji*!`,
     },
   ];
 

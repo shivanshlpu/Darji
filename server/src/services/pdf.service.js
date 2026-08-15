@@ -68,7 +68,7 @@ function buildInvoiceHTML(order = {}, shopInfo = {}) {
   const balanceDue = Math.max(0, grandTotal - paidAmount);
 
   const shopName = shopInfo.shopName || shopInfo.name || 'Darji';
-  const shopPhone = shopInfo.phone || '7828962210, 7000621972';
+  const shopPhone = shopInfo.phone || '+919479487828, +917000621972';
   const shopAddress = shopInfo.address || '80/LIG 1ST New Housing Board Colony, Shahdol (M.P.) 484001';
   const logoUrl = shopInfo.logoUrl || order.logoUrl || null;
   const signatureUrl = shopInfo.signatureUrl || order.signatureUrl || null;
@@ -406,7 +406,7 @@ const generateInvoicePDFKit = async (order, shopInfo = {}) => {
       const balanceDue = Number(order.balanceDue !== undefined ? order.balanceDue : (order.remaining !== undefined ? order.remaining : Math.max(0, grandTotal - paidAmount)));
 
       const shopName = shopInfo.shopName || shopInfo.name || 'Darji';
-      const shopPhone = shopInfo.phone || '7828962210, 7000621972';
+      const shopPhone = shopInfo.phone || '+919479487828, +917000621972';
       const shopAddress = shopInfo.address || '80/LIG 1ST New Housing Board Colony, Shahdol (M.P.) 484001';
       const shopEmail = shopInfo.email || 'darji.tailoring@gmail.com';
 

@@ -661,15 +661,11 @@ export default function Orders() {
     const deliveryDateObj = deliveryDate ? new Date(deliveryDate) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     const expectedDays = Math.max(1, Math.ceil((deliveryDateObj - new Date()) / (1000 * 60 * 60 * 24)));
     const deliveryFormatted = deliveryDateObj.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const sName = shopInfo?.name || 'DARJI';
-    const sAddr = shopInfo?.address || '80/LIG 1ST New Housing Board Colony, Shahdol (M.P.)';
-    const sPhone = shopInfo?.phone || '';
+    const sName = shopInfo?.name || 'Darji';
+    const sAddr = shopInfo?.address || '80/LIG 1ST New Housing Board Colony, Shahdol (M.P.) 484001';
+    const sPhone = shopInfo?.phone || '+919479487828, +917000621972';
 
-    let bookingText = `✨ *${sName.toUpperCase()} — NEW ORDER REGISTERED* ✨\n\nDear *${custName} ji*,\nYour order *${createdTokenNumber}* (${createdOrderNumber}) has been registered!\n\n📋 *Register Details*:\n• Items: ${itemsSummaryList}\n💰 Total Amount: ₹${subtotal}\n💵 Advance Paid: ₹${paid}\n📌 Balance Due: ₹${pending}\n⏳ Expected Delivery: ${expectedDays} Days (${deliveryFormatted})\n\n📍 Address: ${sAddr}`;
-    if (sPhone) {
-      bookingText += `\n📞 Contact: ${sPhone}`;
-    }
-    bookingText += `\n\nThank you for choosing *${sName}*!`;
+    let bookingText = `✨ *DARJI — NEW ORDER REGISTERED* ✨\n\nDear *${custName} ji*,\nYour order *${createdTokenNumber}* (${createdOrderNumber}) has been registered!\n\n📋 *Register Details*:\n• Items: ${itemsSummaryList}\n\n⏳ Expected Delivery: ${expectedDays} Days (${deliveryFormatted})\n\n📍 Address: ${sAddr}\n📞 Contact: ${sPhone}\n\nThank you for choosing *Darji*!`;
 
     // Dispatch WhatsApp registration notification directly to customer mobile number
     if (custMobile) {
@@ -734,17 +730,12 @@ export default function Orders() {
     }
     const custName = order.customerName || 'Customer';
     const tokenStr = order.tokenNumber || order.orderNumber || 'T-100';
-    const pendingVal = order.balanceDue !== undefined ? order.balanceDue : (order.pendingAmount || 0);
 
-    const sName = shopInfo.name || 'DARJI';
-    const sAddr = shopInfo.address || '80/LIG 1ST New Housing Board Colony, Shahdol (M.P.)';
-    const sPhone = shopInfo.phone || '';
+    const sName = shopInfo?.name || 'Darji';
+    const sAddr = shopInfo?.address || '80/LIG 1ST New Housing Board Colony, Shahdol (M.P.) 484001';
+    const sPhone = shopInfo?.phone || '+919479487828, +917000621972';
 
-    let text = `🧵 *${sName.toUpperCase()} — ORDER READY FOR PICKUP* 🧵\n\nDear *${custName} ji*,\nYour order *${tokenStr}* is completely ready! Please come to collect it at your earliest convenience.\n\n${pendingVal > 0 ? `📌 Pending Balance: ₹${pendingVal}\n` : ''}📍 Address: ${sAddr}\n🗺️ Location Map: https://maps.app.goo.gl/wGwLLTRwZU4JuF3AA`;
-    if (sPhone) {
-      text += `\n📞 Contact: ${sPhone}`;
-    }
-    text += `\n\nThank you for choosing *${sName}*!`;
+    let text = `🧵 *DARJI — ORDER READY FOR PICKUP* 🧵\n\nDear *${custName} ji*,\nYour order *${tokenStr}* is completely ready! Please come to collect it at your earliest convenience.\n\n\n📍 Address: ${sAddr}\n🗺️ Location Map: https://maps.app.goo.gl/wGwLLTRwZU4JuF3AA\n📞 Contact: ${sPhone}\n\nThank you for choosing *Darji*!`;
 
     const matchedCust = (customers || []).find(c => c._id === order.customerId || c.name?.toLowerCase() === order.customerName?.toLowerCase());
     const phone = order.customerMobile || order.customerPhone || matchedCust?.mobile || matchedCust?.whatsapp || '';
@@ -862,7 +853,7 @@ export default function Orders() {
       shopName: shopInfo.name || 'Darji',
       tagline: shopInfo.tagline || 'Stitched to Perfection',
       address: shopInfo.address || '80/LIG 1ST New Housing Board Colony, Shahdol (M.P.) 484001',
-      phone: shopInfo.phone || '+91 7828962210, +91 7000621972',
+      phone: shopInfo.phone || '+919479487828, +917000621972',
       email: shopInfo.email || 'darji.tailoring@gmail.com',
       logoUrl: shopInfo.logoUrl,
       signatureUrl: shopInfo.signatureUrl,

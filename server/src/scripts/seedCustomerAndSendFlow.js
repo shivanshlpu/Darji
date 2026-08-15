@@ -117,33 +117,33 @@ async function runSeedAndWhatsAppFlow() {
   console.log(`======================================================\n`);
 
   try {
-    // Message 1: Order Confirmation
-    const msg1 = `✨ *DARJI — ORDER BOOKED* ✨\n\nDear *${customerName} ji*,\nYour order *${orderNumber}* for Custom Designer Suit has been successfully created!\n\n💰 Total Amount: ₹5,500\n💵 Advance Paid: ₹2,000\n📌 Balance Due: ₹3,500\n📅 Target Delivery: 12-08-2026\n\nThank you for choosing *DARJI*!`;
-    console.log('📨 Sending Message 1: Order Confirmation...');
+    // Message 1: Order Registered
+    const msg1 = `✨ *DARJI — NEW ORDER REGISTERED* ✨\n\nDear *${customerName} ji*,\nYour order *T-103* (${orderNumber}) has been registered!\n\n📋 *Register Details*:\n• Items: 1x Top Wear\n\n⏳ Expected Delivery: 7 Days (17/08/2026)\n\n📍 Address: 80/LIG 1ST New Housing Board Colony, Shahdol (M.P.) 484001\n📞 Contact: +919479487828, +917000621972\n\nThank you for choosing *Darji*!`;
+    console.log('📨 Sending Message 1: Order Registration...');
     const res1 = await sendWhatsappMessage(targetMobile, msg1);
     console.log(`✅ Message 1 Sent! ID: ${res1.messageId}`);
 
     await new Promise((r) => setTimeout(r, 2500));
 
     // Message 2: Order Ready Alert
-    const msg2 = `🧵 *DARJI — GARMENT READY FOR PICKUP* 🧵\n\nDear *${customerName} ji*,\nGreat news! Your Custom Designer Suit (Order *${orderNumber}*) is completely ready for pickup.\n\n📍 Shop Address: 80/LIG 1ST New Housing Board Colony, Shahdol (M.P.)\n🗺️ Location Map: https://maps.app.goo.gl/wGwLLTRwZU4JuF3AA\n📞 Call/WhatsApp: 7828962210, 7000621972\n\nThank you for choosing *DARJI*!`;
+    const msg2 = `🧵 *DARJI — ORDER READY FOR PICKUP* 🧵\n\nDear *${customerName} ji*,\nYour order *T-103* is completely ready! Please come to collect it at your earliest convenience.\n\n\n📍 Address: 80/LIG 1ST New Housing Board Colony, Shahdol (M.P.) 484001\n🗺️ Location Map: https://maps.app.goo.gl/wGwLLTRwZU4JuF3AA\n📞 Contact: +919479487828, +917000621972\n\nThank you for choosing *Darji*!`;
     console.log('📨 Sending Message 2: Order Ready Alert...');
     const res2 = await sendWhatsappMessage(targetMobile, msg2);
     console.log(`✅ Message 2 Sent! ID: ${res2.messageId}`);
 
     await new Promise((r) => setTimeout(r, 2500));
 
-    // Message 3: Payment Receipt & Balance Cleared
-    const msg3 = `🧾 *DARJI — PAYMENT REMINDER* 🧾\n\nNamaste *${customerName} ji*! 🙏\nThis is a gentle reminder regarding your pending balance of *₹3,500* at *DARJI*.\n\nPlease clear the pending amount at your earliest convenience or upon pickup.\n\n📍 Shop Address: 80/LIG 1ST New Housing Board Colony, Shahdol (M.P.)\n🗺️ Location Map: https://maps.app.goo.gl/wGwLLTRwZU4JuF3AA\n📞 Contact: 7828962210, 7000621972\n\nThank you for choosing *DARJI*!`;
-    console.log('📨 Sending Message 3: Payment Receipt & Balance Cleared...');
+    // Message 3: Payment Invoice Message
+    const msg3 = `Namaste ${customerName} ji! 🙏\nAttached is your official PDF Invoice #INV-0001 from *Darji*.\n\nTotal: ₹550\nAdvance Paid: ₹200\nBalance Due: ₹350\n\n⭐ *Rate Your Experience / Leave Feedback:* \nhttps://g.page/r/CVIGyGz2VDeQEBM/review\n\nThank you for choosing *Darji*!\n📞 Contact: +919479487828, +917000621972`;
+    console.log('📨 Sending Message 3: Payment Invoice Message...');
     const res3 = await sendWhatsappMessage(targetMobile, msg3);
     console.log(`✅ Message 3 Sent! ID: ${res3.messageId}`);
 
     await new Promise((r) => setTimeout(r, 2500));
 
-    // Message 4: Digital Invoice Notification
-    const msg4 = `📄 *DARJI — DIGITAL TAX INVOICE*\n\nInvoice #INV-2026-000106 generated for *${customerName}*.\nView your digital receipt and warranty details at *DARJI*.\nHave a wonderful day!`;
-    console.log('📨 Sending Message 4: Digital Invoice Notification...');
+    // Message 4: Payment Reminder
+    const msg4 = `🧾 *DARJI — PAYMENT REMINDER* 🧾\n\nNamaste *${customerName} ji*! 🙏\nThis is a gentle reminder regarding your pending balance of *₹350* for order *T-103* at *DARJI*.\n\nPlease clear the pending amount at your earliest convenience or upon pickup.\n\n📍 Shop Address: 80/LIG 1ST New Housing Board Colony, Shahdol (M.P.) 484001\n📞 Contact: +919479487828, +917000621972\n\nThank you for choosing *Darji*!`;
+    console.log('📨 Sending Message 4: Payment Reminder...');
     const res4 = await sendWhatsappMessage(targetMobile, msg4);
     console.log(`✅ Message 4 Sent! ID: ${res4.messageId}`);
 

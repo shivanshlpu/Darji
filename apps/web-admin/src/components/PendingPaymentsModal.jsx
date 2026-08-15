@@ -73,16 +73,11 @@ export default function PendingPaymentsModal({ isOpen, onClose }) {
       e.stopPropagation();
     }
     const phone = cust.whatsapp || cust.mobile;
-    const pAmt = cust.totalPending || 0;
-    const sName = shopInfo?.name || 'DARJI';
-    const sAddr = shopInfo?.address || '80/LIG 1ST New Housing Board Colony, Shahdol (M.P.)';
-    const sPhone = shopInfo?.phone || '';
+    const sName = shopInfo?.name || 'Darji';
+    const sAddr = shopInfo?.address || '80/LIG 1ST New Housing Board Colony, Shahdol (M.P.) 484001';
+    const sPhone = shopInfo?.phone || '+919479487828, +917000621972';
 
-    let text = `🧾 *${sName.toUpperCase()} — PAYMENT REMINDER* 🧾\n\nNamaste *${cust.name} ji*! 🙏\nThis is a gentle reminder regarding your pending balance of *₹${pAmt.toLocaleString('en-IN')}* at *${sName}*.\n\nPlease clear the pending amount at your earliest convenience or upon pickup.\n\n📍 Address: ${sAddr}`;
-    if (sPhone) {
-      text += `\n📞 Contact: ${sPhone}`;
-    }
-    text += `\n\nThank you for your business!`;
+    let text = `🧾 *DARJI — PAYMENT REMINDER* 🧾\n\nNamaste *${cust.name} ji*! 🙏\nThis is a gentle reminder regarding your pending balance of *₹${pAmt.toLocaleString('en-IN')}* at *DARJI*.\n\nPlease clear the pending amount at your earliest convenience or upon pickup.\n\n📍 Address: ${sAddr}\n📞 Contact: ${sPhone}\n\nThank you for choosing *Darji*!`;
 
     try {
       await apiClient.sendWhatsAppTest({ mobile: phone, text });

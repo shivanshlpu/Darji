@@ -23,15 +23,15 @@ const localCache = getSavedLocalSettings();
 const useSettingsStore = create((set, get) => ({
   shopInfo: localCache?.shopInfo || {
     name: 'Darji Premium Tailors',
-    phone: '+91 7828962210, +91 7000621972',
-    phoneNumbers: ['+91 7828962210', '+91 7000621972'],
+    phone: '+919479487828, +917000621972',
+    phoneNumbers: ['+919479487828', '+917000621972'],
     email: 'darjithetailoringshop@gmail.com',
     gstNumber: '24AAACD1234E1Z9',
     address: '80/LIG 1ST New Housing Board Colony, Shahdol (M.P.) 484001',
     currency: 'INR (₹)',
     logoUrl: null,
     signatureUrl: null,
-    reviewLink: '',
+    reviewLink: 'https://g.page/r/CVIGyGz2VDeQEBM/review',
     reviewQrUrl: null,
     termsAndConditions: DEFAULT_TERMS.join('\n'),
   },
@@ -104,11 +104,11 @@ const useSettingsStore = create((set, get) => ({
         const data = res.data;
         const phoneNumbers = Array.isArray(data.phoneNumbers) && data.phoneNumbers.length > 0
           ? data.phoneNumbers
-          : (data.phone ? data.phone.split(',').map(p => p.trim()).filter(Boolean) : ['+91 7828962210', '+91 7000621972']);
+          : (data.phone ? data.phone.split(',').map(p => p.trim()).filter(Boolean) : ['+919479487828', '+917000621972']);
 
         const shopInfo = {
           name: data.name || 'Darji Premium Tailors',
-          phone: phoneNumbers.join(', ') || data.phone || '+91 7828962210, +91 7000621972',
+          phone: phoneNumbers.join(', ') || data.phone || '+919479487828, +917000621972',
           phoneNumbers,
           email: data.email || 'darji.tailoring@gmail.com',
           gstNumber: data.gstNumber || '24AAACD1234E1Z9',
@@ -116,7 +116,7 @@ const useSettingsStore = create((set, get) => ({
           currency: data.currency || 'INR (₹)',
           logoUrl: data.logoUrl || null,
           signatureUrl: data.signatureUrl || null,
-          reviewLink: data.reviewLink || '',
+          reviewLink: data.reviewLink || 'https://g.page/r/CVIGyGz2VDeQEBM/review',
           reviewQrUrl: data.reviewQrUrl || null,
           termsAndConditions: Array.isArray(data.termsAndConditions)
             ? data.termsAndConditions.join('\n')

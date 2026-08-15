@@ -193,7 +193,7 @@ export default function Reports() {
         name: shopInfo.name || 'Darji',
         tagline: shopInfo.tagline || 'Stitched to Perfection',
         address: shopInfo.address || '80/LIG 1ST New Housing Board Colony, Shahdol (M.P.) 484001',
-        phone: shopInfo.phone || '+91 7828962210',
+        phone: shopInfo.phone || '+919479487828, +917000621972',
         email: shopInfo.email || 'darji.tailoring@gmail.com',
         logoUrl: shopInfo.logoUrl,
         signatureUrl: shopInfo.signatureUrl,

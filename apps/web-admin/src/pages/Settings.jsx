@@ -206,7 +206,7 @@ export default function SettingsPage() {
       const parts = shopInfo.phone.split(',').map(s => s.trim()).filter(Boolean);
       if (parts.length > 0) return parts;
     }
-    return ['+91 7828962210', '+91 7000621972'];
+    return ['+919479487828', '+917000621972'];
   };
 
   const handlePhoneItemChange = (index, value) => {
@@ -398,7 +398,7 @@ export default function SettingsPage() {
                   <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                     <input
                       type="text"
-                      placeholder={`Phone Number ${idx + 1} (e.g. +91 7828962210)`}
+                      placeholder={`Phone Number ${idx + 1} (e.g. +919479487828)`}
                       value={num}
                       onChange={(e) => handlePhoneItemChange(idx, e.target.value)}
                       style={{ flex: 1, padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
