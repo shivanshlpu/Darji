@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   Search, Filter, Plus, Eye, ClipboardList, Package, Clock,
-  ChevronRight, SortAsc, SortDesc, X, CheckCircle, UserCheck, Printer, FileText, Share2, Tag, Edit, MessageCircle, Ruler, Sparkles, Calendar
+  ChevronRight, SortAsc, SortDesc, X, CheckCircle, UserCheck, Printer, FileText, Share2, Tag, Edit, MessageCircle, Ruler, Sparkles, Calendar, Trash2
 } from 'lucide-react';
 import useAppStore from '../store/appStore';
 import useCustomerStore from '../store/customerStore';
@@ -39,7 +39,7 @@ const matchesStatusGroup = (orderStatus, filter) => {
 
 export default function Orders() {
   const location = useLocation();
-  const { orders, addOrder, updateOrder, markOrderPaid, updateOrderStatus, updateOrderBill, fetchOrdersFromDB } = useAppStore();
+  const { orders, addOrder, updateOrder, deleteOrder, markOrderPaid, updateOrderStatus, updateOrderBill, fetchOrdersFromDB } = useAppStore();
   const { customers, addCustomer, fetchCustomersFromDB } = useCustomerStore();
   const { shopInfo } = useSettingsStore();
   const { getLatestByCategory, addMeasurement, fetchMeasurementsFromDB, measurements } = useMeasurementStore();
@@ -225,6 +225,31 @@ export default function Orders() {
     await updateOrder(targetId, { deliveryDate: isoDateStr });
     showToast(language === 'hi' ? `✅ डिलीवरी तारीख बदलकर ${newDateStr} कर दी गई!` : `✅ Expected Delivery Date rescheduled to ${newDateStr}`);
     setReschedulingOrderId(null);
+  };
+
+  const handleDeleteOrder = async (order, e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (!order) return;
+    const tokenOrNum = order.tokenNumber ? `Token #${order.tokenNumber}` : order.orderNumber;
+    const confirmMsg = language === 'hi'
+      ? `क्या आप वाकई ${tokenOrNum} (${order.customerName}) को डेटाबेस से डिलीट करना चाहते हैं? केवल यही विशिष्ट ऑर्डर डेटाबेस से हटेगा।`
+      : `Are you sure you want to delete ${tokenOrNum} (${order.customerName}) from your database? Only this specific order will be deleted.`;
+
+    if (window.confirm(confirmMsg)) {
+      try {
+        await deleteOrder(order._id || order.orderNumber);
+        showToast(language === 'hi' ? `🗑️ ${tokenOrNum} को डेटाबेस से डिलीट कर दिया गया!` : `🗑️ ${tokenOrNum} deleted from database!`);
+        if (showEditModal && editingOrder && (editingOrder._id === order._id || editingOrder.orderNumber === order.orderNumber)) {
+          setShowEditModal(false);
+          setEditingOrder(null);
+        }
+      } catch (err) {
+        showToast(`❌ Failed to delete order: ${err.message}`);
+      }
+    }
   };
 
   // New Order Modal State
@@ -998,6 +1023,15 @@ export default function Orders() {
                       URGENT
                     </div>
                   )}
+
+                  <button
+                    type="button"
+                    className="orders__card-del-btn"
+                    onClick={(e) => handleDeleteOrder(order, e)}
+                    title={language === 'hi' ? 'इस ऑर्डर को डेटाबेस से डिलीट करें' : 'Delete this order from database'}
+                  >
+                    <Trash2 size={15} />
+                  </button>
                 </div>
 
                 <div className="orders__card-header">
@@ -1247,6 +1281,15 @@ export default function Orders() {
                       onClick={(e) => openEditModal(order, e)}
                     >
                       <Edit size={16} /> {language === 'hi' ? 'एडिट ऑर्डर' : 'Edit Order'}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="orders__trans-btn orders__trans-btn--del"
+                      onClick={(e) => handleDeleteOrder(order, e)}
+                      title={language === 'hi' ? 'इस ऑर्डर को डिलीट करें' : 'Delete this order'}
+                    >
+                      <Trash2 size={15} /> {language === 'hi' ? 'डिलीट ऑर्डर' : 'Delete Order'}
                     </button>
 
                     {(order.balanceDue !== undefined ? order.balanceDue : order.pendingAmount) > 0 && (
@@ -2020,9 +2063,19 @@ export default function Orders() {
                 </strong>
               </div>
 
-              <div className="modal__actions">
-                <button type="button" className="modal__btn modal__btn--secondary" onClick={() => setShowEditModal(false)}>Cancel</button>
-                <button type="button" className="modal__btn modal__btn--primary" onClick={handleSaveEditedOrder}>Save Order Changes</button>
+              <div className="modal__actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                <button
+                  type="button"
+                  className="modal__btn"
+                  style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  onClick={(e) => handleDeleteOrder(editingOrder, e)}
+                >
+                  <Trash2 size={15} /> {language === 'hi' ? 'ऑर्डर डिलीट करें' : 'Delete Order'}
+                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="button" className="modal__btn modal__btn--secondary" onClick={() => setShowEditModal(false)}>Cancel</button>
+                  <button type="button" className="modal__btn modal__btn--primary" onClick={handleSaveEditedOrder}>Save Order Changes</button>
+                </div>
               </div>
             </div>
           </div>

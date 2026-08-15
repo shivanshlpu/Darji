@@ -300,3 +300,34 @@ export const updateOrderStatus = async (req, res) => {
     res.status(400).json({ success: false, message: err.message });
   }
 };
+
+export const deleteOrder = async (req, res) => {
+  try {
+    const idParam = req.params.id;
+    let query = { isDeleted: false };
+    if (mongoose.Types.ObjectId.isValid(idParam)) {
+      query = { _id: idParam };
+    } else {
+      query = { orderNumber: idParam };
+    }
+    if (req.shopId) query.shopId = req.shopId;
+
+    const order = await Order.findOneAndUpdate(
+      query,
+      { isDeleted: true, syncVersion: Date.now() },
+      { new: true }
+    );
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    res.json({
+      success: true,
+      message: `Order #${order.tokenNumber || order.orderNumber} deleted successfully`,
+      data: order,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};

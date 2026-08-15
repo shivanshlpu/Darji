@@ -291,6 +291,27 @@ const useAppStore = create((set, get) => ({
     });
   },
 
+  deleteOrder: async (orderId) => {
+    const targetId = typeof orderId === 'object' ? (orderId._id || orderId.orderNumber) : orderId;
+    
+    // Optimistic UI update
+    set((state) => {
+      const updatedOrders = state.orders.filter(
+        (o) => o._id !== targetId && o.orderNumber !== targetId && o._id !== orderId
+      );
+      return {
+        orders: updatedOrders,
+        dashboardData: generateDashboardData(updatedOrders, state.expenses),
+      };
+    });
+
+    try {
+      await api.deleteOrder(targetId);
+    } catch (err) {
+      console.warn('[deleteOrder DB Warning]:', err.message);
+    }
+  },
+
   // Expense Management Actions
   addExpense: async (expenseData) => {
     try {

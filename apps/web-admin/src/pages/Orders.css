@@ -578,6 +578,40 @@
   border-color: #15803d !important;
 }
 
+.orders__trans-btn--del {
+  background: #fff1f2 !important;
+  color: #e11d48 !important;
+  border-color: #fecdd3 !important;
+}
+
+.orders__trans-btn--del:hover {
+  background: #ffe4e6 !important;
+  color: #be123c !important;
+  border-color: #fda4af !important;
+}
+
+.orders__card-del-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-tertiary, #94a3b8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-left: auto;
+}
+
+.orders__card-del-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fca5a5;
+  transform: scale(1.08);
+}
+
 .orders__trans-btn.cancel {
   background: var(--color-danger-light);
   color: var(--color-danger);
