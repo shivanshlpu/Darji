@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import {
   FileText, Search, Printer, Share2, Plus, Download, IndianRupee,
-  CheckCircle, Clock, AlertCircle, X, ShieldCheck, Tag, Sparkles, Save
+  CheckCircle, Clock, AlertCircle, X, ShieldCheck, Tag, Sparkles, Save, Trash2
 } from 'lucide-react';
 import useAppStore from '../store/appStore';
 import useCustomerStore from '../store/customerStore';
@@ -16,7 +16,7 @@ import './Billing.css';
 const formatINR = (a) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(a || 0);
 
 export default function Billing() {
-  const { orders, markOrderPaid, updateOrderBill, fetchOrdersFromDB } = useAppStore();
+  const { orders, deleteOrder, markOrderPaid, updateOrderBill, fetchOrdersFromDB } = useAppStore();
   const { customers, fetchCustomersFromDB } = useCustomerStore();
   const { shopInfo } = useSettingsStore();
   const { t } = useLanguageStore();
@@ -333,6 +333,25 @@ export default function Billing() {
                       <Clock size={13} /> WA Reminder
                     </button>
                   )}
+
+                  <button
+                    type="button"
+                    className="billing__action-btn"
+                    style={{ background: '#fee2e2', color: '#dc2626', borderColor: '#fca5a5' }}
+                    onClick={async () => {
+                      if (!selectedInvoiceOrder) return;
+                      const order = orders.find(o => o._id === selectedInvoiceOrder);
+                      if (!order) return;
+                      const tokenOrNum = order.tokenNumber ? `Token #${order.tokenNumber}` : order.orderNumber;
+                      if (window.confirm(`Are you sure you want to delete ${tokenOrNum} (${order.customerName}) from your database? Only this specific order will be deleted.`)) {
+                        await deleteOrder(order._id);
+                        setSelectedInvoiceOrder(null);
+                      }
+                    }}
+                    title="Delete this order from database"
+                  >
+                    <Trash2 size={13} /> Delete Order
+                  </button>
                 </div>
               </div>
 
