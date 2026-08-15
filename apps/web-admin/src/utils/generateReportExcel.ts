@@ -53,11 +53,13 @@ export function exportReportExcel(data: ReportPDFData) {
           </tr>
         </thead>
         <tbody>
-          <tr><td>Total Revenue Collected</td><td class="amount paid">₹ ${data.stats.totalSales.toLocaleString('en-IN')}</td></tr>
-          <tr><td>Total Billed Amount</td><td class="amount">₹ ${data.stats.totalBilled.toLocaleString('en-IN')}</td></tr>
+          <tr><td>Total Order Revenue Collected</td><td class="amount paid">₹ ${data.stats.totalSales.toLocaleString('en-IN')}</td></tr>
+          <tr><td>Extra Shop Income (Tasks / YouTube / Scrap)</td><td class="amount paid">+ ₹ ${(data.stats.totalExtraIncome || 0).toLocaleString('en-IN')}</td></tr>
+          <tr><td>Total Gross Revenue (Sales + Extra Income)</td><td class="amount paid">₹ ${(data.stats.totalGrossRevenue || (data.stats.totalSales + (data.stats.totalExtraIncome || 0))).toLocaleString('en-IN')}</td></tr>
+          <tr><td>Total Billed Amount (Orders)</td><td class="amount">₹ ${data.stats.totalBilled.toLocaleString('en-IN')}</td></tr>
           <tr><td>Total Discounts Given</td><td class="amount" style="color: #D97706;">₹ ${(data.stats.totalDiscounts || 0).toLocaleString('en-IN')}</td></tr>
           <tr><td>Total Operating Expenses</td><td class="amount pending">₹ ${data.stats.totalExp.toLocaleString('en-IN')}</td></tr>
-          <tr class="total-row"><td>Net Profit (Sales - Expenses)</td><td class="amount" style="color: ${data.stats.netProfit >= 0 ? '#16A34A' : '#DC2626'}">₹ ${data.stats.netProfit.toLocaleString('en-IN')}</td></tr>
+          <tr class="total-row"><td>Net Profit (Gross Revenue - Expenses)</td><td class="amount" style="color: ${data.stats.netProfit >= 0 ? '#16A34A' : '#DC2626'}">₹ ${data.stats.netProfit.toLocaleString('en-IN')}</td></tr>
           <tr><td>Profit Margin (%)</td><td class="amount">${data.stats.marginPct}%</td></tr>
           <tr><td>Uncollected Outstanding Dues</td><td class="amount pending">₹ ${data.stats.totalPending.toLocaleString('en-IN')}</td></tr>
         </tbody>
@@ -169,7 +171,7 @@ export function exportReportExcel(data: ReportPDFData) {
 }
 
 export function exportExpensesExcel(expenses: any[], shopName: string = 'DARJI TAILORS') {
-  const fileName = `Darji_Expenses_Ledger_${new Date().toISOString().slice(0, 10)}.xls`;
+  const fileName = `Darji_Expenses_Income_Ledger_${new Date().toISOString().slice(0, 10)}.xls`;
 
   const htmlContent = `
     <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
@@ -182,17 +184,19 @@ export function exportExpensesExcel(expenses: any[], shopName: string = 'DARJI T
         th { background-color: #0B1F3A; color: #FFFFFF; font-weight: bold; border: 1px solid #09172B; padding: 8px 12px; text-align: left; }
         td { border: 1px solid #CBD5E1; padding: 6px 12px; font-size: 11px; }
         tr:nth-child(even) { background-color: #F8FAFC; }
-        .amount { text-align: right; font-weight: bold; color: #DC2626; }
+        .amount-expense { text-align: right; font-weight: bold; color: #DC2626; }
+        .amount-income { text-align: right; font-weight: bold; color: #16A34A; }
       </style>
     </head>
     <body>
-      <div class="title-header">${shopName} — Shop Expenses Ledger</div>
+      <div class="title-header">${shopName} — Shop Expenses & Extra Income Ledger</div>
       <div>Exported: ${new Date().toLocaleDateString('en-IN')}</div>
       <table>
         <thead>
           <tr>
             <th>#</th>
             <th>Date</th>
+            <th>Type</th>
             <th>Description</th>
             <th>Category</th>
             <th>Payment Mode</th>
@@ -200,16 +204,20 @@ export function exportExpensesExcel(expenses: any[], shopName: string = 'DARJI T
           </tr>
         </thead>
         <tbody>
-          ${expenses.map((e, idx) => `
+          ${expenses.map((e, idx) => {
+            const isIncome = e.type === 'income';
+            return `
             <tr>
               <td>${idx + 1}</td>
               <td>${e.date ? new Date(e.date).toLocaleDateString('en-IN') : '-'}</td>
+              <td><b>${isIncome ? 'EXTRA INCOME' : 'EXPENSE'}</b></td>
               <td>${e.description || '-'}</td>
               <td>${(e.category || '-').toUpperCase()}</td>
               <td>${(e.paymentMode || 'cash').toUpperCase()}</td>
-              <td class="amount">₹ ${(e.amount || 0).toLocaleString('en-IN')}</td>
+              <td class="${isIncome ? 'amount-income' : 'amount-expense'}">${isIncome ? '+' : '-'} ₹ ${(e.amount || 0).toLocaleString('en-IN')}</td>
             </tr>
-          `).join('')}
+          `;
+          }).join('')}
         </tbody>
       </table>
     </body>

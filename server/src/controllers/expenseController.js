@@ -2,11 +2,12 @@ import Expense from '../models/Expense.js';
 
 export const getExpenses = async (req, res) => {
   try {
-    const { category, date } = req.query;
+    const { category, date, type } = req.query;
     const query = { shopId: req.shopId, isDeleted: false };
 
     if (category && category !== 'all') query.category = category;
     if (date) query.date = date;
+    if (type && type !== 'all') query.type = type;
 
     const expenses = await Expense.find(query).sort({ date: -1 });
     res.json({ success: true, count: expenses.length, data: expenses });

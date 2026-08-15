@@ -112,6 +112,19 @@ export const EXPENSE_CATEGORIES = [
   { value: 'misc', label: 'Miscellaneous' },
 ];
 
+export const INCOME_CATEGORIES = [
+  { value: 'small_tasks', label: 'Small Tasks / Alterations' },
+  { value: 'youtube', label: 'YouTube / Online Income' },
+  { value: 'scrap', label: 'Fabric Scrap / Waste Sale' },
+  { value: 'commission', label: 'Commission / Referral' },
+  { value: 'other_income', label: 'Other Extra Income' },
+];
+
+export const TRANSACTION_TYPES = [
+  { value: 'expense', label: 'Expense (खर्च)' },
+  { value: 'income', label: 'Extra Income (अतिरिक्त आय)' },
+];
+
 export const PRIORITIES = {
   normal: { label: 'Normal', color: 'default' },
   urgent: { label: 'Urgent', color: 'warning' },

@@ -123,10 +123,12 @@ export default function Reports() {
     const totalDiscounts = filteredOrders.reduce((s, o) => s + (o.discount || 0), 0);
     const discountCount = filteredOrders.filter(o => (o.discount || 0) > 0).length;
     const totalPending = filteredOrders.reduce((s, o) => s + (o.pendingAmount || 0), 0);
-    const totalExp = filteredExpenses.reduce((s, e) => s + (e.amount || 0), 0);
+    const totalExtraIncome = filteredExpenses.filter(e => e.type === 'income').reduce((s, e) => s + (e.amount || 0), 0);
+    const totalExp = filteredExpenses.filter(e => e.type !== 'income').reduce((s, e) => s + (e.amount || 0), 0);
 
-    const netProfit = totalSales - totalExp;
-    const marginPct = totalSales > 0 ? ((netProfit / totalSales) * 100).toFixed(1) : 0;
+    const totalGrossRevenue = totalSales + totalExtraIncome;
+    const netProfit = totalSales + totalExtraIncome - totalExp;
+    const marginPct = totalGrossRevenue > 0 ? ((netProfit / totalGrossRevenue) * 100).toFixed(1) : 0;
 
     return {
       totalSales,
@@ -134,7 +136,9 @@ export default function Reports() {
       totalDiscounts,
       discountCount,
       totalPending,
+      totalExtraIncome,
       totalExp,
+      totalGrossRevenue,
       netProfit,
       marginPct,
     };
@@ -147,7 +151,7 @@ export default function Reports() {
   // Expense breakdown chart data
   const expenseChartData = useMemo(() => {
     const map = {};
-    filteredExpenses.forEach(e => {
+    filteredExpenses.filter(e => e.type !== 'income').forEach(e => {
       const label = getCatLabel(e.category, language);
       map[label] = (map[label] || 0) + e.amount;
     });
@@ -181,12 +185,12 @@ export default function Reports() {
     if (period === 'week') return t('thisWeek', 'This Week');
     if (period === 'month') return t('thisMonth', 'This Month');
     if (period === 'year') return t('thisYear', 'This Year');
-    if (period === 'custom') return `${t('customDate', 'Custom')} (${dateRangeStr})`;
+    if (period === 'custom') return t('customDate', 'Custom Range');
     return t('allTime', 'All Time');
-  }, [period, dateRangeStr, t]);
+  }, [period, t]);
 
-  const prepareReportExportData = () => {
-    return {
+  const handleExportPDF = () => {
+    printReportPDF({
       title: language === 'hi' ? 'वित्तीय बिक्री व राजस्व रिपोर्ट' : 'Financial Sales & Revenue Report',
       language,
       shopInfo: {
@@ -204,45 +208,87 @@ export default function Reports() {
       orders: filteredOrders.map(o => ({
         orderNumber: o.orderNumber,
         tokenNumber: o.tokenNumber,
-        customerName: o.customerName,
+        customerName: o.customerName || (o.customer && o.customer.name) || 'Customer',
         date: formatDateDMY(o.createdAt || o.orderDate),
         subtotal: o.subtotal || 0,
         discount: o.discount || 0,
-        grandTotal: o.grandTotal || o.subtotal,
+        grandTotal: o.grandTotal || o.totalAmount || 0,
         paidAmount: o.paidAmount || 0,
         pendingAmount: o.pendingAmount || 0,
-        status: o.status,
+        status: o.status || 'pending',
       })),
       discountsLedger: discountOrders.map(o => ({
         orderNumber: o.orderNumber,
         tokenNumber: o.tokenNumber,
-        customerName: o.customerName,
-        customerMobile: o.customerMobile || '',
+        customerName: o.customerName || (o.customer && o.customer.name) || 'Customer',
+        customerMobile: o.customerMobile || (o.customer && o.customer.mobile) || '',
         date: formatDateDMY(o.createdAt || o.orderDate),
         subtotal: o.subtotal || 0,
         discount: o.discount || 0,
         discountType: o.discountType || 'amount',
-        discountValue: o.discountValue || o.discount || 0,
-        grandTotal: o.grandTotal || Math.max(0, (o.subtotal || 0) - (o.discount || 0)),
+        discountValue: o.discountValue !== undefined ? o.discountValue : o.discount,
+        grandTotal: o.grandTotal || o.totalAmount || 0,
       })),
       expenses: filteredExpenses.map(e => ({
         date: formatDateDMY(e.date || e.createdAt),
+        type: e.type || 'expense',
         description: e.description,
         category: getCatLabel(e.category, language),
-        paymentMode: e.paymentMode,
+        paymentMode: (e.paymentMode || 'cash').toUpperCase(),
         amount: e.amount,
       })),
-    };
-  };
-
-  const handleExportPDF = () => {
-    const reportData = prepareReportExportData();
-    printReportPDF(reportData);
+    });
   };
 
   const handleExportExcel = () => {
-    const reportData = prepareReportExportData();
-    exportReportExcel(reportData);
+    exportReportExcel({
+      title: language === 'hi' ? 'वित्तीय बिक्री व राजस्व रिपोर्ट' : 'Financial Sales & Revenue Report',
+      language,
+      shopInfo: {
+        name: shopInfo.name || 'Darji',
+        tagline: shopInfo.tagline || 'Stitched to Perfection',
+        address: shopInfo.address || '80/LIG 1ST New Housing Board Colony, Shahdol (M.P.) 484001',
+        phone: shopInfo.phone || '+919479487828, +917000621972',
+        email: shopInfo.email || 'darji.tailoring@gmail.com',
+        logoUrl: shopInfo.logoUrl,
+        signatureUrl: shopInfo.signatureUrl,
+      },
+      dateRangeStr,
+      periodLabel: periodLabelStr,
+      stats,
+      orders: filteredOrders.map(o => ({
+        orderNumber: o.orderNumber,
+        tokenNumber: o.tokenNumber,
+        customerName: o.customerName || (o.customer && o.customer.name) || 'Customer',
+        date: formatDateDMY(o.createdAt || o.orderDate),
+        subtotal: o.subtotal || 0,
+        discount: o.discount || 0,
+        grandTotal: o.grandTotal || o.totalAmount || 0,
+        paidAmount: o.paidAmount || 0,
+        pendingAmount: o.pendingAmount || 0,
+        status: o.status || 'pending',
+      })),
+      discountsLedger: discountOrders.map(o => ({
+        orderNumber: o.orderNumber,
+        tokenNumber: o.tokenNumber,
+        customerName: o.customerName || (o.customer && o.customer.name) || 'Customer',
+        customerMobile: o.customerMobile || (o.customer && o.customer.mobile) || '',
+        date: formatDateDMY(o.createdAt || o.orderDate),
+        subtotal: o.subtotal || 0,
+        discount: o.discount || 0,
+        discountType: o.discountType || 'amount',
+        discountValue: o.discountValue !== undefined ? o.discountValue : o.discount,
+        grandTotal: o.grandTotal || o.totalAmount || 0,
+      })),
+      expenses: filteredExpenses.map(e => ({
+        date: formatDateDMY(e.date || e.createdAt),
+        type: e.type || 'expense',
+        description: e.description,
+        category: getCatLabel(e.category, language),
+        paymentMode: (e.paymentMode || 'cash').toUpperCase(),
+        amount: e.amount,
+      })),
+    });
   };
 
   return (
@@ -301,6 +347,12 @@ export default function Reports() {
           <span className="reports__card-sub">{language === 'hi' ? 'कुल बिलिंग:' : 'Total Billed:'} {formatAmount(stats.totalBilled)}</span>
         </div>
 
+        <div className="reports__card reports__card--income" style={{ background: 'linear-gradient(180deg, rgba(34, 197, 94, 0.05) 0%, var(--bg-surface) 100%)', borderColor: 'rgba(34, 197, 94, 0.3)' }}>
+          <span className="reports__card-label" style={{ color: '#15803d' }}>{language === 'hi' ? 'दुकान की अतिरिक्त आय' : 'Extra Shop Income'}</span>
+          <p className="reports__card-val reports__card-val--success">+{formatAmount(stats.totalExtraIncome)}</p>
+          <span className="reports__card-sub">{language === 'hi' ? 'टास्क, YouTube, कतरन आदि' : 'Tasks, YouTube, scrap, etc.'}</span>
+        </div>
+
         <div className="reports__card reports__card--discount">
           <span className="reports__card-label">{language === 'hi' ? 'कुल डिस्काउंट दिया' : 'Total Discounts Given'}</span>
           <p className="reports__card-val reports__card-val--discount">{formatAmount(stats.totalDiscounts)}</p>
@@ -310,11 +362,11 @@ export default function Reports() {
         <div className="reports__card">
           <span className="reports__card-label">{t('totalOperatingExpenses', 'Total Operating Expenses')}</span>
           <p className="reports__card-val reports__card-val--danger">{formatAmount(stats.totalExp)}</p>
-          <span className="reports__card-sub">{filteredExpenses.length} {language === 'hi' ? 'खर्चे दर्ज' : 'expenses in period'}</span>
+          <span className="reports__card-sub">{filteredExpenses.filter(e => e.type !== 'income').length} {language === 'hi' ? 'खर्चे दर्ज' : 'expenses in period'}</span>
         </div>
 
         <div className="reports__card reports__card--profit">
-          <span className="reports__card-label">{t('netProfit', 'Net Profit (Sales - Expenses)')}</span>
+          <span className="reports__card-label">{language === 'hi' ? 'शुद्ध लाभ (Net Profit)' : 'Net Profit (Sales + Income - Expenses)'}</span>
           <p className="reports__card-val reports__card-val--gold">{formatAmount(stats.netProfit)}</p>
           <span className="reports__card-sub">{language === 'hi' ? 'प्रॉफ़िट मार्जिन:' : 'Profit Margin:'} <strong>{stats.marginPct}%</strong></span>
         </div>

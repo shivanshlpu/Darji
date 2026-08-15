@@ -4,10 +4,15 @@ const expenseSchema = new mongoose.Schema(
   {
     shopId: { type: mongoose.Schema.Types.ObjectId, ref: 'Shop', required: true },
     date: { type: String, required: true }, // YYYY-MM-DD
+    type: {
+      type: String,
+      enum: ['expense', 'income'],
+      default: 'expense',
+    },
     category: {
       type: String,
-      enum: ['shop', 'employee', 'material', 'marketing', 'misc'],
       required: true,
+      default: 'misc',
     },
     subCategory: { type: String, default: '' },
     amount: { type: Number, required: true },

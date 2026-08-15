@@ -50,13 +50,19 @@ export default function Cashbook() {
 
   const totalExpensesCash = useMemo(() => {
     return (expenses || [])
-      .filter(e => e.date === selectedDate && e.paymentMode === 'cash')
+      .filter(e => e.date === selectedDate && e.paymentMode === 'cash' && e.type !== 'income')
+      .reduce((s, e) => s + e.amount, 0);
+  }, [expenses, selectedDate]);
+
+  const totalExtraIncomeCash = useMemo(() => {
+    return (expenses || [])
+      .filter(e => e.date === selectedDate && e.paymentMode === 'cash' && e.type === 'income')
       .reduce((s, e) => s + e.amount, 0);
   }, [expenses, selectedDate]);
 
   const closingCashExpected = useMemo(() => {
-    return openingCash + cashSales - totalExpensesCash;
-  }, [openingCash, cashSales, totalExpensesCash]);
+    return openingCash + cashSales + totalExtraIncomeCash - totalExpensesCash;
+  }, [openingCash, cashSales, totalExtraIncomeCash, totalExpensesCash]);
 
   const mismatch = useMemo(() => {
     return closingCashActual - closingCashExpected;
@@ -129,6 +135,13 @@ export default function Cashbook() {
           <span className="cashbook__card-val cashbook__card-val--success">+{formatINR(cashSales)}</span>
           <small className="cashbook__sub">{language === 'hi' ? 'ऑनलाइन बिक्री (UPI/कार्ड):' : 'Online Sales (UPI/Card):'} {formatINR(onlineSales)}</small>
         </div>
+
+        {totalExtraIncomeCash > 0 && (
+          <div className="cashbook__card cashbook__card--plus" style={{ borderLeftColor: '#16a34a' }}>
+            <span className="cashbook__card-label">{language === 'hi' ? 'अतिरिक्त नकद आय' : 'Extra Cash Income'}</span>
+            <span className="cashbook__card-val cashbook__card-val--success">+{formatINR(totalExtraIncomeCash)}</span>
+          </div>
+        )}
 
         <div className="cashbook__card cashbook__card--minus">
           <span className="cashbook__card-label">{t('cashExpensesTodayCard', '3. Cash Expenses Today')}</span>

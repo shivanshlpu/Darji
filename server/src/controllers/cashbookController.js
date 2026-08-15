@@ -17,10 +17,11 @@ export const getCashbookByDate = async (req, res) => {
     const onlineSales = Math.round(cashSales * 0.45);
 
     const todayExpenses = await Expense.find({ shopId: req.shopId, date, paymentMode: 'cash', isDeleted: false });
-    const totalExpenses = todayExpenses.reduce((s, e) => s + e.amount, 0);
+    const totalExpenses = todayExpenses.filter(e => e.type !== 'income').reduce((s, e) => s + e.amount, 0);
+    const totalExtraCashIncome = todayExpenses.filter(e => e.type === 'income').reduce((s, e) => s + e.amount, 0);
 
     const openingCash = existing ? existing.openingCash : 12500;
-    const closingCashExpected = openingCash + cashSales - totalExpenses;
+    const closingCashExpected = openingCash + cashSales + totalExtraCashIncome - totalExpenses;
 
     res.json({
       success: true,
@@ -29,6 +30,7 @@ export const getCashbookByDate = async (req, res) => {
         openingCash,
         cashSales,
         onlineSales,
+        totalExtraCashIncome,
         totalExpenses,
         closingCashExpected,
         closingCashActual: existing ? existing.closingCashActual : closingCashExpected,
@@ -51,9 +53,10 @@ export const closeCashbook = async (req, res) => {
       .reduce((s, o) => s + (o.paidAmount || 0), 0);
 
     const todayExpenses = await Expense.find({ shopId: req.shopId, date, paymentMode: 'cash', isDeleted: false });
-    const totalExpenses = todayExpenses.reduce((s, e) => s + e.amount, 0);
+    const totalExpenses = todayExpenses.filter(e => e.type !== 'income').reduce((s, e) => s + e.amount, 0);
+    const totalExtraCashIncome = todayExpenses.filter(e => e.type === 'income').reduce((s, e) => s + e.amount, 0);
 
-    const closingCashExpected = openingCash + cashSales - totalExpenses;
+    const closingCashExpected = openingCash + cashSales + totalExtraCashIncome - totalExpenses;
     const mismatch = closingCashActual - closingCashExpected;
 
     if (mismatch !== 0 && !mismatchReason?.trim()) {

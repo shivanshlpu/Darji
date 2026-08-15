@@ -18,7 +18,9 @@ export interface ReportPDFData {
     totalDiscounts?: number;
     discountCount?: number;
     totalPending: number;
+    totalExtraIncome?: number;
     totalExp: number;
+    totalGrossRevenue?: number;
     netProfit: number;
     marginPct: string | number;
   };
@@ -48,6 +50,7 @@ export interface ReportPDFData {
   }>;
   expenses: Array<{
     date: string;
+    type?: string;
     description: string;
     category: string;
     paymentMode: string;
@@ -161,8 +164,8 @@ export function generateReportPDFHTML(data: ReportPDFData): string {
 
     .cards-grid {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 10px;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
       margin-bottom: 24px;
     }
 
@@ -192,6 +195,7 @@ export function generateReportPDFHTML(data: ReportPDFData): string {
     .val-exp { color: #991b1b; }
     .val-profit { color: #b45309; }
     .val-pending { color: #c2410c; }
+    .val-income { color: #15803d; }
 
     table {
       width: 100%;
@@ -296,8 +300,14 @@ export function generateReportPDFHTML(data: ReportPDFData): string {
       <small style="color: #64748b;">${isHi ? 'कुल बिलिंग' : 'Total Billed'}: ${formatINR(data.stats.totalBilled)}</small>
     </div>
 
+    <div class="card" style="background: #f0fdf4; border-color: #bbf7d0;">
+      <span class="card-label">${isHi ? 'अतिरिक्त आय' : 'Extra Income'}</span>
+      <p class="card-val val-income">+${formatINR(data.stats.totalExtraIncome || 0)}</p>
+      <small style="color: #166534;">${isHi ? 'टास्क/यूट्यूब' : 'Tasks/Online'}</small>
+    </div>
+
     <div class="card" style="background: #fffbeb; border-color: #fde68a;">
-      <span class="card-label">${isHi ? 'कुल डिस्काउंट दिया' : 'Total Discounts'}</span>
+      <span class="card-label">${isHi ? 'कुल डिस्काउंट' : 'Discounts'}</span>
       <p class="card-val val-disc">${formatINR(data.stats.totalDiscounts || 0)}</p>
       <small style="color: #b45309;">${data.stats.discountCount || 0} ${isHi ? 'ऑर्डर्स' : 'orders'}</small>
     </div>
@@ -305,17 +315,17 @@ export function generateReportPDFHTML(data: ReportPDFData): string {
     <div class="card">
       <span class="card-label">${isHi ? 'कुल खर्चे' : 'Total Expenses'}</span>
       <p class="card-val val-exp">${formatINR(data.stats.totalExp)}</p>
-      <small style="color: #64748b;">${expenses.length} ${isHi ? 'खर्चे' : 'expenses'}</small>
+      <small style="color: #64748b;">${expenses.filter(e => e.type !== 'income').length} ${isHi ? 'खर्चे' : 'expenses'}</small>
     </div>
 
-    <div class="card">
+    <div class="card" style="background: #fefce8; border-color: #fef08a;">
       <span class="card-label">${isHi ? 'शुद्ध लाभ' : 'Net Profit'}</span>
       <p class="card-val val-profit">${formatINR(data.stats.netProfit)}</p>
       <small style="color: #64748b;">${isHi ? 'मार्जिन' : 'Margin'}: ${data.stats.marginPct}%</small>
     </div>
 
     <div class="card">
-      <span class="card-label">${isHi ? 'कुल बकाया' : 'Uncollected Dues'}</span>
+      <span class="card-label">${isHi ? 'कुल बकाया' : 'Uncollected'}</span>
       <p class="card-val val-pending">${formatINR(data.stats.totalPending)}</p>
       <small style="color: #64748b;">${isHi ? 'सक्रिय ऑर्डर्स पर' : 'Active orders'}</small>
     </div>
