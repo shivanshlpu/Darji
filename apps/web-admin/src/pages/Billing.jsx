@@ -444,14 +444,15 @@ export default function Billing() {
           termsAndConditions: shopInfo.termsAndConditions,
         };
 
-        apiClient.sendWhatsAppInvoicePDF({
-          order: payloadData,
-          mobile: formattedPhone
-        }).then(res => {
+        try {
+          const res = await apiClient.sendWhatsAppInvoicePDF({
+            order: payloadData,
+            mobile: formattedPhone
+          });
           setPdfMsg({ success: true, text: res.message || `Direct Bill #${newOrderNumber} saved & WhatsApp sent to ${formattedPhone}!` });
-        }).catch(err => {
+        } catch (err) {
           setPdfMsg({ success: false, text: `Bill saved, but WhatsApp failed: ${err.message}` });
-        });
+        }
       } else {
         setPdfMsg({
           success: true,
@@ -617,22 +618,18 @@ export default function Billing() {
                         const targetMobile = activeInvoice.customer.mobile || activeInvoice.customer.phone || '';
                         if (!targetMobile) {
                           setPdfMsg({ success: false, text: '❌ Customer mobile number is missing for this invoice!' });
-                          setIsSendingPdf(false);
                           return;
                         }
                         const payloadData = activeInvoiceData || activeInvoice;
 
                         setPdfMsg({ success: true, text: `🚀 Sending PDF Invoice to ${targetMobile}...` });
-                        setShowThankYouModal(true);
 
-                        apiClient.sendWhatsAppInvoicePDF({
+                        const res = await apiClient.sendWhatsAppInvoicePDF({
                           order: payloadData,
                           mobile: targetMobile
-                        }).then((res) => {
-                          setPdfMsg({ success: true, text: res.message || `PDF Invoice sent to ${targetMobile}` });
-                        }).catch((err) => {
-                          setPdfMsg({ success: false, text: err.message || 'Failed to send PDF on WhatsApp' });
                         });
+                        setPdfMsg({ success: true, text: res.message || `PDF Invoice sent to ${targetMobile}` });
+                        setShowThankYouModal(true);
                       } catch (err) {
                         setPdfMsg({ success: false, text: err.message || 'Failed to send PDF on WhatsApp' });
                       } finally {
