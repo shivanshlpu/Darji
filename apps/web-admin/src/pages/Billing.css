@@ -695,6 +695,154 @@
   color: #b45309;
 }
 
+/* Direct Bill Modal & Mobile Responsiveness */
+.billing__direct-modal {
+  max-width: 760px;
+  width: 95vw;
+  max-height: 92vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  background: var(--bg-surface, #ffffff);
+  border-radius: 14px;
+}
+
+.billing__direct-cust-tabs {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: #f8fafc;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+/* Item Builder Card Layout */
+.billing__direct-item-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #ffffff;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+}
+
+.billing__direct-item-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.billing__direct-item-select {
+  width: 130px;
+  min-width: 110px;
+  padding: 7px 8px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.billing__direct-item-name {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  font-size: 13px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.billing__direct-item-delete {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  transition: all 0.15s ease;
+}
+
+.billing__direct-item-delete:hover {
+  background: #fecaca;
+  transform: scale(1.05);
+}
+
+.billing__direct-item-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 6px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.billing__direct-item-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.billing__direct-item-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.billing__direct-item-field input {
+  padding: 6px 8px;
+  font-size: 13px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  width: 70px;
+}
+
+.billing__direct-item-total {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.billing__direct-item-total label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.billing__direct-item-total span {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-navy-700, #0b1f3a);
+}
+
+/* Payment Status Grid */
+.billing__direct-pay-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
 .billing__pay-btn {
   padding: 10px 8px;
   font-size: 12px;
@@ -705,6 +853,10 @@
   color: #475569;
   cursor: pointer;
   transition: all 0.2s ease;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .billing__pay-btn.active-paid {
@@ -728,20 +880,21 @@
   box-shadow: 0 0 0 1px #fcd34d;
 }
 
+/* Bill Summary Strip */
 .billing__direct-summary-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 10px;
   background: #f1f5f9;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
-  padding: 12px 16px;
+  padding: 12px 14px;
   align-items: center;
 }
 
 .billing__direct-summary-strip .summary-label {
   display: block;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
   color: #64748b;
@@ -753,6 +906,54 @@
   font-weight: 700;
   color: #1e293b;
   margin-top: 2px;
+}
+
+/* Modal Actions */
+.billing__direct-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 6px;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* Mobile Breakpoints (< 640px) */
+@media (max-width: 640px) {
+  .billing__direct-modal {
+    width: 98vw;
+    max-height: 94vh;
+    padding: 0;
+    margin: 4px auto;
+  }
+
+  .billing__direct-item-top {
+    flex-wrap: wrap;
+  }
+
+  .billing__direct-item-select {
+    width: 100%;
+  }
+
+  .billing__direct-item-name {
+    flex: 1;
+  }
+
+  .billing__direct-pay-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .billing__direct-summary-strip {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .billing__direct-modal-actions button {
+    flex: 1 1 100%;
+    justify-content: center;
+    padding: 10px;
+  }
 }
 
 

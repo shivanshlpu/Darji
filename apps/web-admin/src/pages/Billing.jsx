@@ -795,26 +795,25 @@ export default function Billing() {
           <div
             className="modal billing__direct-modal animate-scale-in"
             onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '780px', width: '95vw', maxHeight: '90vh', overflowY: 'auto' }}
           >
             <div className="modal__header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <FileText size={20} color="#D97706" />
-                <h2 style={{ margin: 0, fontSize: '18px' }}>
-                  {language === 'hi' ? 'सीधा बिल बनाएं (बिना अलग ऑर्डर के)' : 'Create Direct Bill (No Prior Order Required)'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                <FileText size={20} color="#D97706" style={{ minWidth: '20px' }} />
+                <h2 style={{ margin: 0, fontSize: '17px', lineHeight: '1.3' }}>
+                  {language === 'hi' ? 'सीधा बिल बनाएं' : 'Create Direct Bill'}
                 </h2>
               </div>
               <button className="modal__close" onClick={() => setShowDirectBillModal(false)}>✕</button>
             </div>
 
-            <form onSubmit={handleSaveDirectBill} className="modal__body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <form onSubmit={handleSaveDirectBill} className="modal__body" style={{ display: 'flex', flexDirection: 'column', gap: '14px', padding: '16px' }}>
               {/* Customer Mode Tabs */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '6px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div style={{ display: 'flex', gap: '6px' }}>
+              <div className="billing__direct-cust-tabs">
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                   <button
                     type="button"
                     className={`modal__btn ${directCustMode === 'new' ? 'modal__btn--primary' : 'modal__btn--secondary'}`}
-                    style={{ fontSize: '12px', padding: '6px 14px' }}
+                    style={{ fontSize: '12px', padding: '6px 12px' }}
                     onClick={() => {
                       setDirectCustMode('new');
                       setDirectSelectedCustId('');
@@ -826,10 +825,10 @@ export default function Billing() {
                   <button
                     type="button"
                     className={`modal__btn ${directCustMode === 'existing' ? 'modal__btn--primary' : 'modal__btn--secondary'}`}
-                    style={{ fontSize: '12px', padding: '6px 14px' }}
+                    style={{ fontSize: '12px', padding: '6px 12px' }}
                     onClick={() => setDirectCustMode('existing')}
                   >
-                    🔍 {language === 'hi' ? 'मौजूदा ग्राहक चुनें' : 'Select Existing Customer'}
+                    🔍 {language === 'hi' ? 'मौजूदा ग्राहक' : 'Select Customer'}
                   </button>
                 </div>
 
@@ -839,7 +838,7 @@ export default function Billing() {
                     onClick={clearDirectBillDraft}
                     style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '11px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                   >
-                    <RotateCcw size={11} /> Clear Unsaved Draft
+                    <RotateCcw size={11} /> Clear Draft
                   </button>
                 )}
               </div>
@@ -903,7 +902,7 @@ export default function Billing() {
                     <select
                       value={directCustCountryCode}
                       onChange={(e) => setDirectCustCountryCode(e.target.value)}
-                      style={{ width: '100px', padding: '6px', fontSize: '13px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: 600 }}
+                      style={{ width: '90px', minWidth: '90px', padding: '6px', fontSize: '13px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: 600 }}
                     >
                       {COUNTRY_PREFIXES.map(p => (
                         <option key={p.code} value={p.code}>{p.code}</option>
@@ -913,7 +912,7 @@ export default function Billing() {
                     <input
                       type="text"
                       placeholder="e.g. 9876543210"
-                      style={{ flex: 1 }}
+                      style={{ flex: 1, minWidth: 0 }}
                       value={directCustPhone}
                       onChange={(e) => setDirectCustPhone(e.target.value)}
                       required
@@ -934,7 +933,7 @@ export default function Billing() {
 
               {/* Garment Items Builder */}
               <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '6px' }}>
                   <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: 'var(--color-navy-700)' }}>
                     👗 Items & Prices for this Bill ({directBillItems.length}):
                   </h4>
@@ -953,81 +952,87 @@ export default function Billing() {
                 </div>
 
                 {directBillItems.map((item, idx) => (
-                  <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px', background: '#ffffff', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                    <select
-                      value={item.category || 'topWear'}
-                      style={{ width: '130px', padding: '6px', fontSize: '12px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                      onChange={(e) => {
-                        const updated = [...directBillItems];
-                        updated[idx].category = e.target.value;
-                        const match = GARMENT_CATEGORIES.find(g => g.value === e.target.value);
-                        if (match) updated[idx].name = match.defaultName;
-                        setDirectBillItems(updated);
-                      }}
-                    >
-                      {GARMENT_CATEGORIES.map(g => (
-                        <option key={g.value} value={g.value}>{g.label}</option>
-                      ))}
-                    </select>
-
-                    <input
-                      type="text"
-                      placeholder="Item Description (e.g. Silk Kurti)"
-                      value={item.name}
-                      style={{ flex: 1, padding: '6px 10px', fontSize: '13px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                      onChange={(e) => {
-                        const updated = [...directBillItems];
-                        updated[idx].name = e.target.value;
-                        setDirectBillItems(updated);
-                      }}
-                      required
-                    />
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <label style={{ fontSize: '11px', fontWeight: 600 }}>Qty:</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={item.qty}
-                        style={{ width: '55px', padding: '6px', fontSize: '13px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                        onFocus={(e) => e.target.select()}
+                  <div key={idx} className="billing__direct-item-card">
+                    <div className="billing__direct-item-top">
+                      <select
+                        value={item.category || 'topWear'}
+                        className="billing__direct-item-select"
                         onChange={(e) => {
                           const updated = [...directBillItems];
-                          updated[idx].qty = parseInt(e.target.value) || 1;
+                          updated[idx].category = e.target.value;
+                          const match = GARMENT_CATEGORIES.find(g => g.value === e.target.value);
+                          if (match) updated[idx].name = match.defaultName;
                           setDirectBillItems(updated);
                         }}
-                      />
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <label style={{ fontSize: '11px', fontWeight: 600 }}>Rate (₹):</label>
-                      <input
-                        type="number"
-                        placeholder="0"
-                        value={item.price === 0 ? '' : item.price}
-                        style={{ width: '90px', padding: '6px', fontSize: '13px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) => {
-                          const updated = [...directBillItems];
-                          updated[idx].price = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                          setDirectBillItems(updated);
-                        }}
-                      />
-                    </div>
-
-                    <span style={{ minWidth: '70px', textAlign: 'right', fontWeight: 700, fontSize: '13px', color: 'var(--color-navy-700)' }}>
-                      ₹{((Number(item.qty) || 1) * (Number(item.price) || 0)).toLocaleString('en-IN')}
-                    </span>
-
-                    {directBillItems.length > 1 && (
-                      <button
-                        type="button"
-                        style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: '4px', width: '26px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onClick={() => setDirectBillItems(directBillItems.filter((_, i) => i !== idx))}
                       >
-                        ✕
-                      </button>
-                    )}
+                        {GARMENT_CATEGORIES.map(g => (
+                          <option key={g.value} value={g.value}>{g.label}</option>
+                        ))}
+                      </select>
+
+                      <input
+                        type="text"
+                        placeholder="Item Description (e.g. Silk Kurti)"
+                        value={item.name}
+                        className="billing__direct-item-name"
+                        onChange={(e) => {
+                          const updated = [...directBillItems];
+                          updated[idx].name = e.target.value;
+                          setDirectBillItems(updated);
+                        }}
+                        required
+                      />
+
+                      {directBillItems.length > 1 && (
+                        <button
+                          type="button"
+                          className="billing__direct-item-delete"
+                          onClick={() => setDirectBillItems(directBillItems.filter((_, i) => i !== idx))}
+                          title="Remove item"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="billing__direct-item-bottom">
+                      <div className="billing__direct-item-field">
+                        <label>Qty:</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.qty}
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => {
+                            const updated = [...directBillItems];
+                            updated[idx].qty = parseInt(e.target.value) || 1;
+                            setDirectBillItems(updated);
+                          }}
+                        />
+                      </div>
+
+                      <div className="billing__direct-item-field">
+                        <label>Rate (₹):</label>
+                        <input
+                          type="number"
+                          placeholder="0"
+                          value={item.price === 0 ? '' : item.price}
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => {
+                            const updated = [...directBillItems];
+                            updated[idx].price = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                            setDirectBillItems(updated);
+                          }}
+                        />
+                      </div>
+
+                      <div className="billing__direct-item-total">
+                        <label>Total:</label>
+                        <span>
+                          ₹{((Number(item.qty) || 1) * (Number(item.price) || 0)).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1075,7 +1080,7 @@ export default function Billing() {
                 <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-navy-700)', display: 'block', marginBottom: '8px' }}>
                   Payment Status for this Bill:
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '12px' }}>
+                <div className="billing__direct-pay-grid">
                   <button
                     type="button"
                     className={`billing__pay-btn ${directPaymentStatus === 'paid' ? 'active-paid' : ''}`}
@@ -1151,7 +1156,7 @@ export default function Billing() {
                 )}
                 <div>
                   <span className="summary-label" style={{ fontWeight: 800 }}>GRAND TOTAL:</span>
-                  <span className="summary-val" style={{ fontSize: '18px', fontWeight: 900, color: 'var(--color-navy-700)' }}>
+                  <span className="summary-val" style={{ fontSize: '16px', fontWeight: 900, color: 'var(--color-navy-700)' }}>
                     ₹{directGrandTotal.toLocaleString('en-IN')}
                   </span>
                 </div>
@@ -1167,7 +1172,7 @@ export default function Billing() {
                 </div>
               </div>
 
-              <div className="modal__actions" style={{ justifyContent: 'flex-end', gap: '8px', flexWrap: 'wrap' }}>
+              <div className="billing__direct-modal-actions">
                 <button
                   type="button"
                   className="modal__btn modal__btn--secondary"
@@ -1179,14 +1184,13 @@ export default function Billing() {
                   type="submit"
                   className="modal__btn modal__btn--primary"
                   disabled={isSavingDirectBill}
-                  style={{ minWidth: '150px' }}
                 >
                   <Save size={14} /> {isSavingDirectBill ? 'Saving Bill...' : 'Save & View Invoice'}
                 </button>
                 <button
                   type="button"
                   className="modal__btn"
-                  style={{ minWidth: '170px', background: '#16a34a', color: '#ffffff', borderColor: '#15803d', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
+                  style={{ background: '#16a34a', color: '#ffffff', borderColor: '#15803d', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
                   disabled={isSavingDirectBill}
                   onClick={(e) => handleSaveDirectBill(e, true)}
                 >
