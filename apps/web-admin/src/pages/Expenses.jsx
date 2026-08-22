@@ -65,7 +65,7 @@ export default function Expenses() {
       const itemType = isIncome ? 'income' : 'expense';
       
       const matchType = typeFilter === 'all' || itemType === typeFilter;
-      const matchSearch = (e.description || '').toLowerCase().includes(search.toLowerCase());
+      const matchSearch = String(e.description || '').toLowerCase().includes(String(search || '').toLowerCase());
       const matchCat = categoryFilter === 'all' || e.category === categoryFilter;
       return matchType && matchSearch && matchCat;
     });

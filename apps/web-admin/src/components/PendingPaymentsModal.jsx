@@ -34,7 +34,10 @@ export default function PendingPaymentsModal({ isOpen, onClose }) {
 
       let existing = custMap.get(custKey);
       if (!existing) {
-        const foundCust = customers.find(c => c._id === o.customerId || c.name?.toLowerCase() === o.customerName?.toLowerCase());
+        const foundCust = customers.find(c =>
+          c._id === o.customerId ||
+          (c.name && o.customerName && typeof c.name === 'string' && typeof o.customerName === 'string' && c.name.toLowerCase() === o.customerName.toLowerCase())
+        );
         existing = {
           _id: foundCust?._id || o.customerId || `cust_${Math.random().toString(36).substr(2, 6)}`,
           name: foundCust?.name || o.customerName || 'Customer',
@@ -54,8 +57,11 @@ export default function PendingPaymentsModal({ isOpen, onClose }) {
     let list = Array.from(custMap.values());
 
     if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(c => c.name.toLowerCase().includes(q) || c.mobile.includes(q));
+      const q = String(search || '').toLowerCase();
+      list = list.filter(c =>
+        (c.name && typeof c.name === 'string' && c.name.toLowerCase().includes(q)) ||
+        (c.mobile && String(c.mobile).includes(q))
+      );
     }
 
     return list.sort((a, b) => b.totalPending - a.totalPending);

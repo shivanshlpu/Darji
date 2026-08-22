@@ -25,7 +25,7 @@ export default function CustomerEditModal({ customerData, customerId, isOpen, on
 
     let found = customers.find(c =>
       (targetId && String(c._id) === String(targetId)) ||
-      (targetName && c.name.toLowerCase() === targetName.toLowerCase())
+      (targetName && c.name && typeof c.name === 'string' && typeof targetName === 'string' && c.name.toLowerCase() === targetName.toLowerCase())
     );
 
     if (!found && (customerData || targetId)) {
@@ -75,7 +75,7 @@ export default function CustomerEditModal({ customerData, customerId, isOpen, on
     if (!customer) return [];
     return orders.filter(o =>
       String(o.customerId) === String(customer._id) ||
-      (o.customerName && o.customerName.toLowerCase() === customer.name.toLowerCase())
+      (o.customerName && customer?.name && typeof o.customerName === 'string' && typeof customer.name === 'string' && o.customerName.toLowerCase() === customer.name.toLowerCase())
     );
   }, [customer, orders]);
 

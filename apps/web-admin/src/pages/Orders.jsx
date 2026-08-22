@@ -273,23 +273,23 @@ export default function Orders() {
 
   const filteredCustomersList = useMemo(() => {
     if (!custSearchQuery) return customers;
-    const q = custSearchQuery.toLowerCase();
-    return customers.filter(c =>
-      (c.name && c.name.toLowerCase().includes(q)) ||
-      (c.mobile && c.mobile.includes(q))
+    const q = String(custSearchQuery || '').toLowerCase();
+    return (customers || []).filter(c =>
+      (c.name && typeof c.name === 'string' && c.name.toLowerCase().includes(q)) ||
+      (c.mobile && String(c.mobile).includes(q))
     );
   }, [customers, custSearchQuery]);
 
   const matchedExistingCustomer = useMemo(() => {
     if (dismissDuplicateNotice) return null;
-    const cleanMobile = (newCustMobile || '').trim().replace(/\D/g, '');
-    const cleanName = (newCustName || '').trim().toLowerCase();
+    const cleanMobile = String(newCustMobile || '').trim().replace(/\D/g, '');
+    const cleanName = String(newCustName || '').trim().toLowerCase();
 
     if (!cleanMobile && !cleanName) return null;
 
     return (customers || []).find(c => {
-      const cMobile = (c.mobile || '').replace(/\D/g, '');
-      const cName = (c.name || '').trim().toLowerCase();
+      const cMobile = String(c.mobile || '').replace(/\D/g, '');
+      const cName = String(c.name || '').trim().toLowerCase();
 
       if (cleanMobile && cleanMobile.length >= 10 && cMobile.includes(cleanMobile)) {
         return true;
@@ -353,11 +353,11 @@ export default function Orders() {
   const filteredOrders = useMemo(() => {
     let result = [...orders];
     if (search) {
-      const q = search.toLowerCase();
+      const q = String(search || '').toLowerCase();
       result = result.filter(o =>
-        (o.orderNumber && o.orderNumber.toLowerCase().includes(q)) ||
-        (o.tokenNumber && o.tokenNumber.toLowerCase().includes(q)) ||
-        (o.customerName && o.customerName.toLowerCase().includes(q))
+        (o.orderNumber && typeof o.orderNumber === 'string' && o.orderNumber.toLowerCase().includes(q)) ||
+        (o.tokenNumber && typeof o.tokenNumber === 'string' && o.tokenNumber.toLowerCase().includes(q)) ||
+        (o.customerName && typeof o.customerName === 'string' && o.customerName.toLowerCase().includes(q))
       );
     }
     if (statusFilter === 'all') {
@@ -455,7 +455,7 @@ export default function Orders() {
     // 2. Fallback: Search past orders of this customer for items in this category
     const targetCust = customers.find(c => c._id === custId);
     const custName = targetCust?.name || custId;
-    const custOrders = (orders || []).filter(o => o.customerId === custId || (o.customerName && custName && o.customerName.toLowerCase() === custName.toLowerCase()));
+    const custOrders = (orders || []).filter(o => o.customerId === custId || (o.customerName && custName && typeof o.customerName === 'string' && typeof custName === 'string' && o.customerName.toLowerCase() === custName.toLowerCase()));
 
     for (const o of custOrders) {
       if (Array.isArray(o.items)) {
@@ -770,7 +770,10 @@ export default function Orders() {
 
     let text = `🧵 *DARJI — ORDER READY FOR PICKUP* 🧵\n\nDear *${custName} ji*,\nYour order *${tokenStr}* is completely ready! Please come to collect it at your earliest convenience.\n\n\n📍 Address: ${sAddr}\n🗺️ Location Map: https://maps.app.goo.gl/wGwLLTRwZU4JuF3AA\n📞 Contact: ${sPhone}\n\nThank you for choosing *Darji*!`;
 
-    const matchedCust = (customers || []).find(c => c._id === order.customerId || c.name?.toLowerCase() === order.customerName?.toLowerCase());
+    const matchedCust = (customers || []).find(c =>
+      c._id === order.customerId ||
+      (c.name && order.customerName && typeof c.name === 'string' && typeof order.customerName === 'string' && c.name.toLowerCase() === order.customerName.toLowerCase())
+    );
     const phone = order.customerMobile || order.customerPhone || matchedCust?.mobile || matchedCust?.whatsapp || '';
     if (!phone) {
       showToast(`❌ Customer ${custName} does not have a mobile number saved!`);
@@ -862,7 +865,10 @@ export default function Orders() {
 
   const activeBillInvoiceData = useMemo(() => {
     if (!activeBillOrder || !activeBill) return null;
-    const matchedCust = (customers || []).find(c => c._id === activeBillOrder.customerId || c.name?.toLowerCase() === activeBillOrder.customerName?.toLowerCase());
+    const matchedCust = (customers || []).find(c =>
+      c._id === activeBillOrder.customerId ||
+      (c.name && activeBillOrder.customerName && typeof c.name === 'string' && typeof activeBillOrder.customerName === 'string' && c.name.toLowerCase() === activeBillOrder.customerName.toLowerCase())
+    );
     const custAddress = activeBillOrder.customerAddress || activeBillOrder.customer?.address || matchedCust?.address || matchedCust?.city || '';
 
     return {
@@ -1064,7 +1070,10 @@ export default function Orders() {
                     </p>
                     <span className="orders__card-customer-phone">
                       {(() => {
-                        const matchedCust = (customers || []).find(c => c._id === order.customerId || c.name?.toLowerCase() === order.customerName?.toLowerCase());
+                        const matchedCust = (customers || []).find(c =>
+                          c._id === order.customerId ||
+                          (c.name && order.customerName && typeof c.name === 'string' && typeof order.customerName === 'string' && c.name.toLowerCase() === order.customerName.toLowerCase())
+                        );
                         return order.customerMobile || order.customerPhone || matchedCust?.mobile || matchedCust?.phone || '';
                       })()}
                     </span>

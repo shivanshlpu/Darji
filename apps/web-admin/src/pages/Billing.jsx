@@ -159,10 +159,11 @@ export default function Billing() {
   };
 
   const filteredOrders = useMemo(() => {
+    const q = String(search || '').toLowerCase();
     return orders.filter(o =>
-      (o.orderNumber && o.orderNumber.toLowerCase().includes(search.toLowerCase())) ||
-      (o.tokenNumber && o.tokenNumber.toLowerCase().includes(search.toLowerCase())) ||
-      (o.customerName && o.customerName.toLowerCase().includes(search.toLowerCase()))
+      (o.orderNumber && typeof o.orderNumber === 'string' && o.orderNumber.toLowerCase().includes(q)) ||
+      (o.tokenNumber && typeof o.tokenNumber === 'string' && o.tokenNumber.toLowerCase().includes(q)) ||
+      (o.customerName && typeof o.customerName === 'string' && o.customerName.toLowerCase().includes(q))
     );
   }, [orders, search]);
 
@@ -278,10 +279,11 @@ export default function Billing() {
 
   const filteredDirectCustomers = useMemo(() => {
     if (!directCustSearch) return customers;
-    const q = directCustSearch.toLowerCase();
-    return customers.filter(c =>
-      (c.name && c.name.toLowerCase().includes(q)) ||
-      (c.mobile && c.mobile.includes(q))
+    const q = String(directCustSearch || '').toLowerCase();
+    return (customers || []).filter(c =>
+      (c.name && typeof c.name === 'string' && c.name.toLowerCase().includes(q)) ||
+      (c.mobile && String(c.mobile).includes(q)) ||
+      (c.address && typeof c.address === 'string' && c.address.toLowerCase().includes(q))
     );
   }, [customers, directCustSearch]);
 

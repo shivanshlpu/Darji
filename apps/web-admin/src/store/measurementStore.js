@@ -38,14 +38,14 @@ const useMeasurementStore = create((set, get) => ({
     );
     
     if (category) {
-      const catLower = category.toLowerCase();
+      const catLower = typeof category === 'string' ? category.toLowerCase() : '';
       const isTopGroup = ['topwear', 'shirt', 'kurta', 'sherwani', 'blazer', 'suit', 'top'].includes(catLower);
       const isBottomGroup = ['bottomwear', 'pant', 'trouser', 'salwar', 'pyjama', 'jeans', 'bottom'].includes(catLower);
 
       const matches = customerMeasurements
         .filter(m => {
           if (m.category === category) return true;
-          const mCat = (m.category || '').toLowerCase();
+          const mCat = typeof m.category === 'string' ? m.category.toLowerCase() : '';
           if (isTopGroup && ['topwear', 'shirt', 'kurta', 'sherwani', 'blazer', 'suit', 'top'].includes(mCat)) return true;
           if (isBottomGroup && ['bottomwear', 'pant', 'trouser', 'salwar', 'pyjama', 'jeans', 'bottom'].includes(mCat)) return true;
           return false;
@@ -70,7 +70,7 @@ const useMeasurementStore = create((set, get) => ({
     return measurements
       .filter(m =>
         (m.customerId === customerId || String(m.customerId) === String(customerId)) &&
-        (m.category === category || (m.category || '').toLowerCase() === (category || '').toLowerCase())
+        (m.category === category || (typeof m.category === 'string' && typeof category === 'string' && m.category.toLowerCase() === category.toLowerCase()))
       )
       .sort((a, b) => (b.version || 0) - (a.version || 0));
   },
@@ -82,7 +82,7 @@ const useMeasurementStore = create((set, get) => ({
     const existing = measurements
       .filter(m =>
         (m.customerId === customerId || String(m.customerId) === String(customerId)) &&
-        (m.category === category || (m.category || '').toLowerCase() === (category || '').toLowerCase())
+        (m.category === category || (typeof m.category === 'string' && typeof category === 'string' && m.category.toLowerCase() === category.toLowerCase()))
       )
       .sort((a, b) => (b.version || 0) - (a.version || 0));
 

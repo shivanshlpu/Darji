@@ -372,7 +372,7 @@ export default function CustomerProfile() {
                         ...measurementFields,
                         [field.key]: parseFloat(e.target.value) || ''
                       })}
-                      placeholder={`Enter ${field.label.toLowerCase()}`}
+                      placeholder={`Enter ${String(field?.label || '').toLowerCase()}`}
                     />
                   </div>
                 ))}

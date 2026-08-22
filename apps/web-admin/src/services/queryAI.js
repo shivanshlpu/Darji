@@ -188,10 +188,10 @@ export function processLocalQuery(text, { orders = [], expenses = [], customers 
 
   // 6. CUSTOMER MEASUREMENT / NAAP QUERY
   if (raw.includes('naap') || raw.includes('measurement') || raw.includes('size') || raw.includes('sizes')) {
-    const matchedCustomer = customers.find(c => c.name && raw.includes(c.name.toLowerCase().split(' ')[0]));
+    const matchedCustomer = customers.find(c => c.name && typeof c.name === 'string' && raw.includes(c.name.toLowerCase().split(' ')[0]));
 
     if (matchedCustomer) {
-      const custOrders = orders.filter(o => o.customerId === matchedCustomer._id || (o.customerName && o.customerName.toLowerCase() === matchedCustomer.name.toLowerCase()));
+      const custOrders = orders.filter(o => o.customerId === matchedCustomer._id || (o.customerName && typeof o.customerName === 'string' && typeof matchedCustomer.name === 'string' && o.customerName.toLowerCase() === matchedCustomer.name.toLowerCase()));
       let foundMeas = null;
       let garmentName = 'Garment';
 
@@ -272,10 +272,10 @@ export function processLocalQuery(text, { orders = [], expenses = [], customers 
 
   // 9. PENDING PAYMENTS (GLOBAL OR SPECIFIC CUSTOMER)
   if (raw.includes('pending') || raw.includes('baaki') || raw.includes('udhaar') || raw.includes('baki')) {
-    const matchedCustomer = customers.find(c => c.name && raw.includes(c.name.toLowerCase().split(' ')[0]));
+    const matchedCustomer = customers.find(c => c.name && typeof c.name === 'string' && raw.includes(c.name.toLowerCase().split(' ')[0]));
 
     if (matchedCustomer) {
-      const custOrders = orders.filter(o => (o.customerId === matchedCustomer._id || (o.customerName && o.customerName.toLowerCase() === matchedCustomer.name.toLowerCase())) && o.pendingAmount > 0);
+      const custOrders = orders.filter(o => (o.customerId === matchedCustomer._id || (o.customerName && typeof o.customerName === 'string' && typeof matchedCustomer.name === 'string' && o.customerName.toLowerCase() === matchedCustomer.name.toLowerCase())) && o.pendingAmount > 0);
       const totalPending = custOrders.reduce((s, o) => s + o.pendingAmount, 0);
 
       return {

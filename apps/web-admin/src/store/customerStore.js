@@ -43,11 +43,11 @@ const useCustomerStore = create((set, get) => ({
     let filtered = [...customers];
 
     if (searchQuery) {
-      const q = searchQuery.toLowerCase();
+      const q = String(searchQuery || '').toLowerCase();
       filtered = filtered.filter(c =>
-        c.name.toLowerCase().includes(q) ||
-        c.mobile.includes(q) ||
-        c.address.toLowerCase().includes(q)
+        (c.name && typeof c.name === 'string' && c.name.toLowerCase().includes(q)) ||
+        (c.mobile && String(c.mobile).includes(q)) ||
+        (c.address && typeof c.address === 'string' && c.address.toLowerCase().includes(q))
       );
     }
 
@@ -62,8 +62,8 @@ const useCustomerStore = create((set, get) => ({
     }
 
     filtered.sort((a, b) => {
-      let valA = a[sortBy] || '';
-      let valB = b[sortBy] || '';
+      let valA = a[sortBy] !== undefined && a[sortBy] !== null ? a[sortBy] : '';
+      let valB = b[sortBy] !== undefined && b[sortBy] !== null ? b[sortBy] : '';
       if (typeof valA === 'string') valA = valA.toLowerCase();
       if (typeof valB === 'string') valB = valB.toLowerCase();
       if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
