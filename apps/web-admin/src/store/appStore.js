@@ -149,11 +149,18 @@ const useAppStore = create((set, get) => ({
       const updatedOrders = state.orders.map((o) => {
         if (o._id === orderId || o.orderNumber === orderId) {
           const newItems = items || o.items || [];
-          const newSubtotal = subtotal !== undefined ? subtotal : newItems.reduce((s, i) => s + ((i.qty || 1) * (Number(i.price) || 0)), 0);
-          const newDiscount = discount !== undefined ? discount : (o.discount || 0);
-          const newExtraCharges = extraCharges !== undefined ? extraCharges : (o.extraCharges || 0);
-          const newGrandTotal = Math.max(0, newSubtotal - newDiscount + newExtraCharges);
-          const newPaid = paidAmount !== undefined ? paidAmount : (o.paidAmount || o.advancePaid || 0);
+          const newSubtotal = Math.round(subtotal !== undefined ? subtotal : newItems.reduce((s, i) => s + ((i.qty || 1) * (Number(i.price) || 0)), 0));
+          const newDiscountType = discountType || o.discountType || 'amount';
+          const newDiscountValue = discountValue !== undefined ? Number(discountValue) : (o.discountValue || 0);
+          let newDiscount = 0;
+          if (newDiscountType === 'percent') {
+            newDiscount = Math.round((newSubtotal * newDiscountValue) / 100);
+          } else {
+            newDiscount = discount !== undefined ? Math.round(Number(discount)) : Math.round(newDiscountValue || o.discount || 0);
+          }
+          const newExtraCharges = Math.round(extraCharges !== undefined ? extraCharges : (o.extraCharges || 0));
+          const newGrandTotal = Math.max(0, Math.round(newSubtotal - newDiscount + newExtraCharges));
+          const newPaid = Math.round(paidAmount !== undefined ? paidAmount : (o.paidAmount || o.advancePaid || 0));
           const newPending = Math.max(0, newGrandTotal - newPaid);
           const newPaymentStatus = newPending <= 0 ? 'paid' : newPaid > 0 ? 'partial' : 'unpaid';
 
@@ -161,8 +168,8 @@ const useAppStore = create((set, get) => ({
             items: newItems,
             subtotal: newSubtotal,
             discount: newDiscount,
-            discountType: discountType || o.discountType || 'amount',
-            discountValue: discountValue !== undefined ? discountValue : (o.discountValue || newDiscount),
+            discountType: newDiscountType,
+            discountValue: newDiscountValue,
             extraCharges: newExtraCharges,
             grandTotal: newGrandTotal,
             totalAmount: newGrandTotal,
@@ -213,11 +220,11 @@ const useAppStore = create((set, get) => ({
       const updatedOrders = state.orders.map((o) => {
         if (o._id === orderId || o.orderNumber === orderId) {
           const items = updatedFields.items || o.items || [];
-          const subtotal = updatedFields.subtotal !== undefined ? Number(updatedFields.subtotal) : items.reduce((sum, item) => sum + (Number(item.qty || 1) * Number(item.price || 0)), 0);
-          const discount = updatedFields.discount !== undefined ? Number(updatedFields.discount) : (o.discount || 0);
-          const extraCharges = updatedFields.extraCharges !== undefined ? Number(updatedFields.extraCharges) : (o.extraCharges || 0);
-          const grandTotal = updatedFields.grandTotal !== undefined ? Number(updatedFields.grandTotal) : (updatedFields.totalAmount !== undefined ? Number(updatedFields.totalAmount) : Math.max(0, subtotal - discount + extraCharges));
-          const advancePaid = updatedFields.advancePaid !== undefined ? Number(updatedFields.advancePaid) : (updatedFields.paidAmount !== undefined ? Number(updatedFields.paidAmount) : (o.advancePaid || o.paidAmount || 0));
+          const subtotal = Math.round(updatedFields.subtotal !== undefined ? Number(updatedFields.subtotal) : items.reduce((sum, item) => sum + (Number(item.qty || 1) * Number(item.price || 0)), 0));
+          const discount = Math.round(updatedFields.discount !== undefined ? Number(updatedFields.discount) : (o.discount || 0));
+          const extraCharges = Math.round(updatedFields.extraCharges !== undefined ? Number(updatedFields.extraCharges) : (o.extraCharges || 0));
+          const grandTotal = updatedFields.grandTotal !== undefined ? Math.round(Number(updatedFields.grandTotal)) : (updatedFields.totalAmount !== undefined ? Math.round(Number(updatedFields.totalAmount)) : Math.max(0, Math.round(subtotal - discount + extraCharges)));
+          const advancePaid = updatedFields.advancePaid !== undefined ? Math.round(Number(updatedFields.advancePaid)) : (updatedFields.paidAmount !== undefined ? Math.round(Number(updatedFields.paidAmount)) : (o.advancePaid || o.paidAmount || 0));
           const balanceDue = Math.max(0, grandTotal - advancePaid);
           const paymentStatus = balanceDue <= 0 ? 'paid' : advancePaid > 0 ? 'partial' : 'unpaid';
 

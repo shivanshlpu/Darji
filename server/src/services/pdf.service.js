@@ -57,14 +57,14 @@ function buildInvoiceHTML(order = {}, shopInfo = {}) {
     ? new Date(order.orderDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
     : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-  const subtotal = order.subtotal !== undefined
+  const subtotal = Math.round(order.subtotal !== undefined
     ? Number(order.subtotal)
-    : items.reduce((sum, item) => sum + ((Number(item.price || item.rate) || 0) * (Number(item.qty || item.quantity) || 1)), 0);
+    : items.reduce((sum, item) => sum + ((Number(item.price || item.rate) || 0) * (Number(item.qty || item.quantity) || 1)), 0));
 
-  const discount = Number(order.discount) || 0;
-  const extraCharges = Number(order.extraCharges) || 0;
-  const grandTotal = order.totalAmount || order.grandTotal || Math.max(0, subtotal - discount + extraCharges);
-  const paidAmount = Number(order.paidAmount) || Number(order.advancePaid) || 0;
+  const discount = Math.round(Number(order.discount) || 0);
+  const extraCharges = Math.round(Number(order.extraCharges) || 0);
+  const grandTotal = Math.round(order.totalAmount || order.grandTotal || Math.max(0, subtotal - discount + extraCharges));
+  const paidAmount = Math.round(Number(order.paidAmount) || Number(order.advancePaid) || 0);
   const balanceDue = Math.max(0, grandTotal - paidAmount);
 
   const shopName = shopInfo.shopName || shopInfo.name || 'Darji';
@@ -216,8 +216,8 @@ function buildInvoiceHTML(order = {}, shopInfo = {}) {
       <div class="cust-card-title">BILL TO</div>
       <div class="cust-field-grid">
         <div class="cust-field-row"><span class="cust-label">Name</span><span class="cust-val">${customerName}</span></div>
-        <div class="cust-field-row"><span class="cust-label">Contact</span><span class="cust-val">+91 ${customerPhone}</span></div>
-        <div class="cust-field-row"><span class="cust-label">Address</span><span class="cust-val">${customerAddress}</span></div>
+        <div class="cust-field-row"><span class="cust-label">Contact</span><span class="cust-val">${customerPhone.startsWith('+') ? customerPhone : `+91 ${customerPhone}`}</span></div>
+        <div class="cust-field-row"><span class="cust-label">Address</span><span class="cust-val">${customerAddress || '—'}</span></div>
       </div>
     </div>
 
@@ -254,10 +254,11 @@ function buildInvoiceHTML(order = {}, shopInfo = {}) {
 
       <div class="totals-card">
         <div class="tot-row"><span>Total Amount</span><span>₹ ${formatAmount(subtotal)}</span></div>
-        ${discount > 0 ? `<div class="tot-row"><span>Discount</span><span>- ₹ ${formatAmount(discount)}</span></div>` : ''}
+        ${discount > 0 ? `<div class="tot-row"><span>Discount</span><span style="color: #D97706; font-weight: 700;">- ₹ ${formatAmount(discount)}</span></div>` : ''}
         ${extraCharges > 0 ? `<div class="tot-row"><span>Extra Charges</span><span>+ ₹ ${formatAmount(extraCharges)}</span></div>` : ''}
         <div class="tot-row tot-row-grand"><span>GRAND TOTAL</span><span>₹ ${formatAmount(grandTotal)}</span></div>
       </div>
+    </div>
     </div>
 
     ${(() => {
@@ -395,15 +396,15 @@ const generateInvoicePDFKit = async (order, shopInfo = {}) => {
         ? new Date(order.orderDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
         : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
-      const subtotal = order.subtotal !== undefined
+      const subtotal = Math.round(order.subtotal !== undefined
         ? Number(order.subtotal)
-        : items.reduce((sum, item) => sum + ((Number(item.price || item.rate) || 0) * (Number(item.qty || item.quantity) || 1)), 0);
+        : items.reduce((sum, item) => sum + ((Number(item.price || item.rate) || 0) * (Number(item.qty || item.quantity) || 1)), 0));
 
-      const discount = Number(order.discount) || 0;
-      const extraCharges = Number(order.extraCharges) || 0;
-      const grandTotal = Number(order.grandTotal || order.totalAmount || Math.max(0, subtotal - discount + extraCharges));
-      const paidAmount = Number(order.paidAmount !== undefined ? order.paidAmount : (order.advancePaid !== undefined ? order.advancePaid : (order.paid !== undefined ? order.paid : (order.advance || 0))));
-      const balanceDue = Number(order.balanceDue !== undefined ? order.balanceDue : (order.remaining !== undefined ? order.remaining : Math.max(0, grandTotal - paidAmount)));
+      const discount = Math.round(Number(order.discount) || 0);
+      const extraCharges = Math.round(Number(order.extraCharges) || 0);
+      const grandTotal = Math.round(Number(order.grandTotal || order.totalAmount || Math.max(0, subtotal - discount + extraCharges)));
+      const paidAmount = Math.round(Number(order.paidAmount !== undefined ? order.paidAmount : (order.advancePaid !== undefined ? order.advancePaid : (order.paid !== undefined ? order.paid : (order.advance || 0)))));
+      const balanceDue = Math.max(0, grandTotal - paidAmount);
 
       const shopName = shopInfo.shopName || shopInfo.name || 'Darji';
       const shopPhone = shopInfo.phone || '+919479487828, +917000621972';

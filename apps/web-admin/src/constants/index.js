@@ -49,6 +49,20 @@ export const MEASUREMENT_CATEGORIES = {
       { key: 'bNeckDeep', label: 'B. Neck Deep', unit: 'in' },
     ],
   },
+  ethnicFormal: {
+    label: 'Ethnic & Formal',
+    icon: '👑',
+    fields: [
+      { key: 'fullLength', label: 'Full Length', unit: 'in' },
+      { key: 'shoulder', label: 'Shoulder', unit: 'in' },
+      { key: 'chest', label: 'Chest / Bust', unit: 'in' },
+      { key: 'waistRound', label: 'Waist Round', unit: 'in' },
+      { key: 'hipRound', label: 'Hip Round', unit: 'in' },
+      { key: 'armHole', label: 'Arm Hole', unit: 'in' },
+      { key: 'sleeve', label: 'Sleeve', unit: 'in' },
+      { key: 'bottomLength', label: 'Bottom / Skirt Length', unit: 'in' },
+    ],
+  },
   other: {
     label: 'Other',
     icon: '✨',
@@ -64,15 +78,43 @@ export const MEASUREMENT_CATEGORIES = {
   },
 };
 
+// Streamlined & Intended Garment Categories for New & Edit Orders
+export const GARMENT_CATEGORIES = [
+  { value: 'topWear', label: 'Top Wear (Shirt / Kurta / Suit / Coat)', defaultName: 'Top Wear' },
+  { value: 'bottomWear', label: 'Bottom Wear (Pant / Trouser / Pajama / Salwar)', defaultName: 'Bottom Wear' },
+  { value: 'blouse', label: 'Blouse (Saree Blouse / Crop Top / Choli)', defaultName: 'Blouse' },
+  { value: 'ethnicFormal', label: 'Ethnic & Formal (Sherwani / Lehenga / Indo-Western)', defaultName: 'Ethnic / Formal' },
+  { value: 'other', label: 'Other Garment / Custom Alteration', defaultName: 'Custom Garment' },
+];
+
+// Country Code Prefixes for flexible billing & communication
+export const COUNTRY_PREFIXES = [
+  { code: '+91', label: '🇮🇳 +91 (India)' },
+  { code: '+1', label: '🇺🇸 +1 (USA / Canada)' },
+  { code: '+971', label: '🇦🇪 +971 (UAE)' },
+  { code: '+44', label: '🇬🇧 +44 (UK)' },
+  { code: '+966', label: '🇸🇦 +966 (Saudi Arabia)' },
+  { code: '+965', label: '🇰🇼 +965 (Kuwait)' },
+  { code: '+974', label: '🇶🇦 +974 (Qatar)' },
+  { code: '+61', label: '🇦🇺 +61 (Australia)' },
+  { code: '+65', label: '🇸🇬 +65 (Singapore)' },
+  { code: '+60', label: '🇲🇾 +60 (Malaysia)' },
+  { code: '+977', label: '🇳🇵 +977 (Nepal)' },
+];
+
 // Safe helper for legacy category resolution without polluting Object.entries
-const LEGACY_CATEGORY_MAP = {
+export const LEGACY_CATEGORY_MAP = {
   shirt: 'topWear',
   pant: 'bottomWear',
   suit: 'topWear',
   kurta: 'topWear',
-  lehenga: 'bottomWear',
+  lehenga: 'ethnicFormal',
+  sherwani: 'ethnicFormal',
   sareeBlouse: 'blouse',
   coat: 'topWear',
+  blazer: 'topWear',
+  trouser: 'bottomWear',
+  pajama: 'bottomWear',
 };
 
 export const getCategoryConfig = (catKey) => {

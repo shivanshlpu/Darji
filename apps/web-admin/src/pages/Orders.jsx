@@ -8,7 +8,7 @@ import useAppStore from '../store/appStore';
 import useCustomerStore from '../store/customerStore';
 import useSettingsStore from '../store/settingsStore';
 import useMeasurementStore from '../store/measurementStore';
-import { ORDER_STATUSES, PAYMENT_STATUSES, PRIORITIES, MEASUREMENT_CATEGORIES, getCategoryConfig } from '../constants';
+import { ORDER_STATUSES, PAYMENT_STATUSES, PRIORITIES, MEASUREMENT_CATEGORIES, GARMENT_CATEGORIES, COUNTRY_PREFIXES, getCategoryConfig } from '../constants';
 import { printInvoiceHTML } from '../../../../shared/utils/generateInvoice';
 import { InvoiceTemplate } from '../../../../shared/components/InvoiceTemplate';
 import CustomerEditModal from '../components/CustomerEditModal';
@@ -259,6 +259,7 @@ export default function Orders() {
   const [custSearchQuery, setCustSearchQuery] = useState('');
   const [showCustDropdown, setShowCustDropdown] = useState(false);
   const [newCustName, setNewCustName] = useState('');
+  const [newCustCountryCode, setNewCustCountryCode] = useState('+91');
   const [newCustMobile, setNewCustMobile] = useState('');
   const [newCustAddress, setNewCustAddress] = useState('');
   const [priority, setPriority] = useState('normal');
@@ -414,11 +415,14 @@ export default function Orders() {
     return counts;
   }, [orders]);
 
-  // Auto-format Indian Mobile Number to (+91)
+  // Auto-format Mobile Number preserving international prefix
   const formatMobileNumber = (input) => {
-    let cleaned = input.replace(/\D/g, '');
-    if (cleaned.length === 10) return `+91 ${cleaned}`;
-    if (cleaned.length > 10 && cleaned.startsWith('91')) return `+${cleaned}`;
+    if (!input) return '';
+    let str = String(input).trim();
+    if (str.startsWith('+')) return str;
+    const clean = str.replace(/\D/g, '');
+    if (clean.length === 10) return `${newCustCountryCode} ${clean}`;
+    if (clean.length > 10) return `+${clean}`;
     return input;
   };
 
@@ -497,9 +501,13 @@ export default function Orders() {
     const updated = [...orderItems];
     updated[index].category = newCategory;
 
-    if (newCategory === 'topWear') updated[index].name = 'Top Wear';
+    const matchedGarment = GARMENT_CATEGORIES.find(g => g.value === newCategory);
+    if (matchedGarment) {
+      updated[index].name = matchedGarment.defaultName;
+    } else if (newCategory === 'topWear') updated[index].name = 'Top Wear';
     else if (newCategory === 'bottomWear') updated[index].name = 'Bottom Wear';
     else if (newCategory === 'blouse') updated[index].name = 'Blouse';
+    else if (newCategory === 'ethnicFormal') updated[index].name = 'Ethnic / Formal';
     else if (newCategory === 'other') updated[index].name = 'Custom Garment / Other';
 
     if (customerMode === 'existing' && selectedCustId) {
@@ -1565,18 +1573,31 @@ export default function Orders() {
                       />
                     </div>
                     <div className="modal__field">
-                      <label>Mobile Number (Auto +91) *</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. 9876543210"
-                        value={newCustMobile}
-                        onChange={(e) => {
-                          setNewCustMobile(e.target.value);
-                          setDismissDuplicateNotice(false);
-                        }}
-                        onBlur={handleMobileBlur}
-                        required
-                      />
+                      <label>Mobile Number *</label>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <select
+                          value={newCustCountryCode}
+                          onChange={(e) => setNewCustCountryCode(e.target.value)}
+                          style={{ width: '95px', padding: '6px', fontSize: '13px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: 600 }}
+                        >
+                          {COUNTRY_PREFIXES.map(p => (
+                            <option key={p.code} value={p.code}>{p.code}</option>
+                          ))}
+                          <option value="custom">Other</option>
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="e.g. 9876543210"
+                          style={{ flex: 1 }}
+                          value={newCustMobile}
+                          onChange={(e) => {
+                            setNewCustMobile(e.target.value);
+                            setDismissDuplicateNotice(false);
+                          }}
+                          onBlur={handleMobileBlur}
+                          required
+                        />
+                      </div>
                     </div>
                     <div className="modal__field" style={{ gridColumn: '1 / -1' }}>
                       <label>Address</label>
@@ -1678,8 +1699,8 @@ export default function Orders() {
                         value={item.category}
                         onChange={(e) => handleItemCategoryChange(idx, e.target.value)}
                       >
-                        {Object.entries(MEASUREMENT_CATEGORIES).map(([catKey, catVal]) => (
-                          <option key={catKey} value={catKey}>{catVal.label}</option>
+                        {GARMENT_CATEGORIES.map((cat) => (
+                          <option key={cat.value} value={cat.value}>{cat.label}</option>
                         ))}
                       </select>
                       <input
@@ -1877,18 +1898,13 @@ export default function Orders() {
                     <div key={idx} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px', marginBottom: '10px' }}>
                       <div className="orders__bill-item-row" style={{ marginBottom: '8px', gap: '6px' }}>
                         <select
-                          value={item.category || 'shirt'}
-                          style={{ padding: '6px', fontSize: '12px', borderRadius: '4px', border: '1px solid #cbd5e1', width: '110px' }}
+                          value={item.category || 'topWear'}
+                          style={{ padding: '6px', fontSize: '12px', borderRadius: '4px', border: '1px solid #cbd5e1', width: '130px' }}
                           onChange={(e) => handleEditItemChange(idx, 'category', e.target.value)}
                         >
-                          <option value="shirt">Shirt/Kurta</option>
-                          <option value="pant">Pant/Trouser</option>
-                          <option value="suit">Salwar Suit</option>
-                          <option value="blouse">Blouse</option>
-                          <option value="lehenga">Lehenga</option>
-                          <option value="sherwani">Sherwani</option>
-                          <option value="coat">Coat/Blazer</option>
-                          <option value="other">Other Garment</option>
+                          {GARMENT_CATEGORIES.map((cat) => (
+                            <option key={cat.value} value={cat.value}>{cat.label}</option>
+                          ))}
                         </select>
 
                         <input

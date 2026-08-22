@@ -45,11 +45,13 @@ export function generateInvoiceHTML(data: InvoiceData): string {
   const items = data.items || [];
   const customer = data.customer || { name: '', phone: '', address: '' };
 
-  const subtotal = data.subtotal ?? items.reduce((acc, item) => acc + (item?.qty || 0) * (item?.price || 0), 0);
-  const discount = data.discount || 0;
+  const subtotal = data.subtotal !== undefined ? Math.round(data.subtotal) : items.reduce((acc, item) => acc + (item?.qty || 0) * (item?.price || 0), 0);
+  const discount = Math.round(data.discount || 0);
   const tax = data.tax || 0;
-  const extraCharges = data.extraCharges || 0;
-  const grandTotal = data.grandTotal ?? Math.round(subtotal - discount + tax + extraCharges);
+  const extraCharges = Math.round(data.extraCharges || 0);
+  const grandTotal = data.grandTotal !== undefined ? Math.round(data.grandTotal) : Math.max(0, Math.round(subtotal - discount + tax + extraCharges));
+  const paidAmount = Math.round(data.paidAmount || 0);
+  const balanceDue = data.balanceDue !== undefined ? Math.round(data.balanceDue) : Math.max(0, grandTotal - paidAmount);
 
   const formattedInvoiceNo = (data.invoiceNumber || '').replace(/[^0-9]/g, '') || data.invoiceNumber || '';
   const formattedDate = data.date || '';
@@ -586,11 +588,11 @@ export function generateInvoiceHTML(data: InvoiceData): string {
       <table class="items-table">
         <thead>
           <tr>
-            <th style="width:70px;">SR. NO.</th>
+            <th style="width: 70px;">SR. NO.</th>
             <th class="th-desc">DESCRIPTION</th>
-            <th style="width:70px;">QTY</th>
-            <th style="width:140px;">UNIT PRICE (₹)</th>
-            <th style="width:140px;">TOTAL PRICE (₹)</th>
+            <th style="width: 70px;">QTY</th>
+            <th style="width: 140px;">UNIT PRICE (₹)</th>
+            <th style="width: 140px;">TOTAL PRICE (₹)</th>
           </tr>
         </thead>
         <tbody>
@@ -627,7 +629,7 @@ export function generateInvoiceHTML(data: InvoiceData): string {
         ${discount > 0 ? `
         <div class="tot-row">
           <span>Discount</span>
-          <span>- ₹ ${formatAmount(discount)}</span>
+          <span style="color: #D97706; font-weight: 700;">- ₹ ${formatAmount(discount)}</span>
         </div>` : ''}
         ${extraCharges > 0 ? `
         <div class="tot-row">

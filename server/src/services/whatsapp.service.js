@@ -234,10 +234,9 @@ export const initWhatsapp = async () => {
       if (connection === 'close') {
         const statusCode = lastDisconnect?.error?.output?.statusCode;
         const errorMsg = lastDisconnect?.error?.message || '';
-        const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
-        const isBadSession = statusCode === DisconnectReason.badSession || statusCode === 428 || statusCode === 403 || errorMsg.includes('Bad MAC') || errorMsg.includes('SessionEntry');
+        const isDefinitiveLoggedOut = statusCode === DisconnectReason.loggedOut;
 
-        console.log(`[WhatsApp Engine] Connection closed. StatusCode: ${statusCode}`);
+        console.log(`[WhatsApp Engine] Connection closed. StatusCode: ${statusCode}, Reason: ${errorMsg || 'stream close'}`);
 
         await syncSessionState({
           status: 'disconnected',
@@ -246,8 +245,8 @@ export const initWhatsapp = async () => {
         sock?.ev?.removeAllListeners();
         sock = null;
 
-        if (isLoggedOut || isBadSession) {
-          console.log(`[WhatsApp Engine] Session desynchronized (Code ${statusCode}). Wiping stale session keys for clean re-pairing...`);
+        if (isDefinitiveLoggedOut) {
+          console.log(`[WhatsApp Engine] Device unlinked / logged out from phone (Code ${statusCode}). Resetting session keys...`);
           await wipeMongoAuthKeys();
           wipeAuthDirectory();
           setTimeout(() => {
@@ -255,7 +254,8 @@ export const initWhatsapp = async () => {
             initWhatsapp();
           }, 1500);
         } else {
-          console.log('[WhatsApp Engine] Temporary stream disconnect. Reconnecting in 3s...');
+          // Temporary network / WebSocket reconnect (e.g. 401/428/515/440/stream glitch) -> Preserve keys and reconnect
+          console.log(`[WhatsApp Engine] Connection interrupted (Code ${statusCode}). Retaining auth credentials and reconnecting in 3s...`);
           setTimeout(() => {
             isInitializing = false;
             initWhatsapp();
@@ -273,17 +273,21 @@ export const initWhatsapp = async () => {
 };
 
 /**
- * Phone Number Normalization
+ * Phone Number Normalization with Full International Prefix Flexibility
  */
 export const normalizeJid = (mobile) => {
   if (!mobile) return null;
-  let clean = String(mobile).replace(/\D/g, '');
+  let str = String(mobile).trim();
+  let clean = str.replace(/\D/g, '');
+  if (!clean || clean.length < 7) return null;
+
+  // If 10 digits without country code, default to 91 (India)
   if (clean.length === 10) {
     clean = '91' + clean;
-  } else if (clean.length > 10 && clean.startsWith('0')) {
+  } else if (clean.length === 11 && clean.startsWith('0')) {
     clean = '91' + clean.slice(1);
   }
-  if (!clean || clean.length < 10) return null;
+  // If already contains country code (11-15 digits), keep as-is
   return clean + '@s.whatsapp.net';
 };
 

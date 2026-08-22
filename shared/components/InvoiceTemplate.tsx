@@ -8,11 +8,11 @@ export const InvoiceTemplate: React.FC<{ invoice?: InvoiceData | null }> = ({ in
   const items = invoice.items || [];
   const customer = invoice.customer || { name: '', phone: '', address: '' };
 
-  const subtotal = invoice.subtotal ?? items.reduce((acc, item) => acc + (item?.qty || 0) * (item?.price || 0), 0);
-  const discount = invoice.discount || 0;
+  const subtotal = invoice.subtotal !== undefined ? Math.round(invoice.subtotal) : items.reduce((acc, item) => acc + (item?.qty || 0) * (item?.price || 0), 0);
+  const discount = Math.round(invoice.discount || 0);
   const tax = invoice.tax || 0;
-  const extraCharges = invoice.extraCharges || 0;
-  const grandTotal = invoice.grandTotal ?? Math.round(subtotal - discount + tax + extraCharges);
+  const extraCharges = Math.round(invoice.extraCharges || 0);
+  const grandTotal = invoice.grandTotal !== undefined ? Math.round(invoice.grandTotal) : Math.max(0, Math.round(subtotal - discount + tax + extraCharges));
 
   const formattedInvoiceNo = (invoice.invoiceNumber || '').replace(/[^0-9]/g, '') || invoice.invoiceNumber || '';
   const formattedDate = invoice.date || '';
@@ -110,11 +110,11 @@ export const InvoiceTemplate: React.FC<{ invoice?: InvoiceData | null }> = ({ in
             </div>
             <div className="target-cust-field-row">
               <span className="target-cust-label">Contact</span>
-              <span className="target-cust-val">{customer.phone || customer.mobile || ''}</span>
+              <span className="target-cust-val">{customer.phone || (customer as any).mobile || ''}</span>
             </div>
             <div className="target-cust-field-row">
               <span className="target-cust-label">Address</span>
-              <span className="target-cust-val">{customer.address || 'MEDICAL COLLEGE SDL'}</span>
+              <span className="target-cust-val">{customer.address || (customer as any).city || '—'}</span>
             </div>
           </div>
         </div>
@@ -165,21 +165,20 @@ export const InvoiceTemplate: React.FC<{ invoice?: InvoiceData | null }> = ({ in
             {discount > 0 && (
               <div className="target-tot-row">
                 <span>Discount</span>
-                <span>- ₹ {formatAmount(discount)}</span>
+                <span style={{ color: '#D97706', fontWeight: 700 }}>- ₹ {formatAmount(discount)}</span>
+              </div>
+            )}
+            {extraCharges > 0 && (
+              <div className="target-tot-row">
+                <span>Extra Charges</span>
+                <span>+ ₹ {formatAmount(extraCharges)}</span>
               </div>
             )}
             <div className="target-tot-row target-tot-row-grand">
               <span>GRAND TOTAL</span>
               <span>₹ {formatAmount(grandTotal)}</span>
             </div>
-            <div className="target-tot-row" style={{ color: '#16a34a', fontWeight: 600, marginTop: '4px' }}>
-              <span>Advance Paid</span>
-              <span>₹ {formatAmount(invoice.paidAmount || 0)}</span>
-            </div>
-            <div className="target-tot-row" style={{ color: (invoice.balanceDue || Math.max(0, grandTotal - (invoice.paidAmount || 0))) > 0 ? '#dc2626' : '#16a34a', fontWeight: 700 }}>
-              <span>Outstanding Balance</span>
-              <span>₹ {formatAmount(invoice.balanceDue !== undefined ? invoice.balanceDue : Math.max(0, grandTotal - (invoice.paidAmount || 0)))}</span>
-            </div>
+          </div>
         </div>
 
         {/* ⭐ Google Review QR & Link Banner (If Present) */}

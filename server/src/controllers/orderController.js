@@ -51,7 +51,7 @@ export const getOrders = async (req, res) => {
     if (paymentStatus && paymentStatus !== 'all') query.paymentStatus = paymentStatus;
     if (customerId) query.customerId = customerId;
 
-    const orders = await Order.find(query).sort({ createdAt: -1 });
+    const orders = await Order.find(query).populate('customerId').sort({ createdAt: -1 });
     res.json({ success: true, count: orders.length, data: orders });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -80,27 +80,42 @@ export const createOrder = async (req, res) => {
       }
     }
 
-    // 2. Resolve Customer ID
+    // 2. Resolve Customer ID and save Address
     let customerId = body.customerId;
-    if (!customerId || !mongoose.Types.ObjectId.isValid(customerId)) {
-      const rawMobile = body.customerMobile || '';
-      const cleanDigits = String(rawMobile).replace(/\D/g, '').slice(-10);
-      let cust = null;
-      if (cleanDigits) {
+    let cust = null;
+    if (customerId && mongoose.Types.ObjectId.isValid(customerId)) {
+      cust = await Customer.findById(customerId);
+      if (cust && body.customerAddress && (!cust.address || cust.address !== body.customerAddress)) {
+        cust.address = body.customerAddress.trim();
+        await cust.save();
+      }
+    } else {
+      const rawMobile = String(body.customerMobile || body.customerPhone || '').trim();
+      if (rawMobile) {
         cust = await Customer.findOne({
-          mobile: { $regex: cleanDigits },
+          $or: [
+            { mobile: rawMobile },
+            { whatsapp: rawMobile },
+            { mobile: { $regex: rawMobile.replace(/\D/g, '').slice(-10) || '___NONE___' } }
+          ],
           isDeleted: false,
         });
       }
-      if (!cust) {
+      if (cust) {
+        customerId = cust._id;
+        if (body.customerAddress && (!cust.address || cust.address !== body.customerAddress)) {
+          cust.address = body.customerAddress.trim();
+          await cust.save();
+        }
+      } else {
         cust = await Customer.create({
           shopId,
           name: body.customerName || 'Customer',
-          mobile: rawMobile || (cleanDigits ? `+91 ${cleanDigits}` : '9000000000'),
-          address: body.customerAddress || '',
+          mobile: rawMobile || '+91 9000000000',
+          address: body.customerAddress ? body.customerAddress.trim() : '',
         });
+        customerId = cust._id;
       }
-      customerId = cust._id;
     }
 
     // 3. Resolve Unique Order Number & Token Number (Avoid duplicate key errors)
@@ -140,24 +155,34 @@ export const createOrder = async (req, res) => {
         }))
       : [{ name: 'Custom Suit', category: 'topWear', qty: 1, price: 1200, notes: '', measurements: {} }];
 
-    const subtotal = Number(body.subtotal) || items.reduce((sum, item) => sum + (item.qty * item.price), 0);
-    const discount = Number(body.discount) || 0;
+    const subtotal = Math.round(Number(body.subtotal) || items.reduce((sum, item) => sum + (item.qty * item.price), 0));
     const discountType = body.discountType || 'amount';
-    const discountValue = Number(body.discountValue) || discount;
-    const extraCharges = Number(body.extraCharges) || 0;
-    const grandTotal = Math.max(0, subtotal - discount + extraCharges);
-    const paidAmount = Number(body.paidAmount !== undefined ? body.paidAmount : body.advancePaid) || 0;
+    const discountValue = Number(body.discountValue !== undefined ? body.discountValue : (body.discount || 0));
+    let discount = 0;
+    if (discountType === 'percent') {
+      discount = Math.round((subtotal * discountValue) / 100);
+    } else {
+      discount = Math.round(discountValue);
+    }
+    const extraCharges = Math.round(Number(body.extraCharges) || 0);
+    const grandTotal = Math.max(0, Math.round(subtotal - discount + extraCharges));
+    const paidAmount = Math.round(Number(body.paidAmount !== undefined ? body.paidAmount : (body.advancePaid !== undefined ? body.advancePaid : 0)));
     const pendingAmount = Math.max(0, grandTotal - paidAmount);
     const paymentStatus = pendingAmount <= 0 ? 'paid' : paidAmount > 0 ? 'partial' : 'unpaid';
     const delDate = body.deliveryDate ? new Date(body.deliveryDate) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    const resolvedAddress = body.customerAddress ? body.customerAddress.trim() : (cust?.address || '');
+    const resolvedMobile = body.customerMobile ? body.customerMobile.trim() : (body.customerPhone ? body.customerPhone.trim() : (cust?.mobile || ''));
 
     const order = await Order.create({
       shopId,
       orderNumber,
       tokenNumber,
       customerId,
-      customerName: body.customerName || 'Customer',
-      customerMobile: body.customerMobile || '',
+      customerName: body.customerName || cust?.name || 'Customer',
+      customerMobile: resolvedMobile,
+      customerPhone: resolvedMobile,
+      customerAddress: resolvedAddress,
       deliveryDate: delDate,
       priority: body.priority || 'normal',
       status: body.status || 'pending',
@@ -175,7 +200,7 @@ export const createOrder = async (req, res) => {
       pendingAmount,
       balanceDue: pendingAmount,
       paymentStatus,
-      timeline: [{ status: 'pending', timestamp: new Date(), updatedBy: 'Owner' }],
+      timeline: [{ status: body.status || 'pending', timestamp: new Date(), updatedBy: 'Owner' }],
     });
 
     res.status(201).json({ success: true, data: order });
@@ -191,13 +216,18 @@ export const updateOrder = async (req, res) => {
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
     const items = req.body.items || order.items;
-    const subtotal = req.body.subtotal !== undefined ? Number(req.body.subtotal) : items.reduce((sum, item) => sum + (Number(item.qty || 1) * Number(item.price || 0)), 0);
-    const discount = req.body.discount !== undefined ? Number(req.body.discount) : (order.discount || 0);
+    const subtotal = Math.round(req.body.subtotal !== undefined ? Number(req.body.subtotal) : items.reduce((sum, item) => sum + (Number(item.qty || 1) * Number(item.price || 0)), 0));
     const discountType = req.body.discountType || order.discountType || 'amount';
-    const discountValue = req.body.discountValue !== undefined ? Number(req.body.discountValue) : (order.discountValue || discount);
-    const extraCharges = req.body.extraCharges !== undefined ? Number(req.body.extraCharges) : (order.extraCharges || 0);
-    const grandTotal = req.body.grandTotal !== undefined ? Number(req.body.grandTotal) : Math.max(0, subtotal - discount + extraCharges);
-    const advancePaid = req.body.advancePaid !== undefined ? Number(req.body.advancePaid) : (req.body.paidAmount !== undefined ? Number(req.body.paidAmount) : (order.advancePaid || order.paidAmount || 0));
+    const discountValue = req.body.discountValue !== undefined ? Number(req.body.discountValue) : (order.discountValue || 0);
+    let discount = 0;
+    if (discountType === 'percent') {
+      discount = Math.round((subtotal * discountValue) / 100);
+    } else {
+      discount = req.body.discount !== undefined ? Math.round(Number(req.body.discount)) : Math.round(discountValue || order.discount || 0);
+    }
+    const extraCharges = Math.round(req.body.extraCharges !== undefined ? Number(req.body.extraCharges) : (order.extraCharges || 0));
+    const grandTotal = req.body.grandTotal !== undefined ? Math.round(Number(req.body.grandTotal)) : Math.max(0, Math.round(subtotal - discount + extraCharges));
+    const advancePaid = req.body.advancePaid !== undefined ? Math.round(Number(req.body.advancePaid)) : (req.body.paidAmount !== undefined ? Math.round(Number(req.body.paidAmount)) : (order.advancePaid || order.paidAmount || 0));
     const balanceDue = Math.max(0, grandTotal - advancePaid);
     const paymentStatus = balanceDue <= 0 ? 'paid' : advancePaid > 0 ? 'partial' : 'unpaid';
 
@@ -217,6 +247,17 @@ export const updateOrder = async (req, res) => {
       paymentStatus,
       syncVersion: (order.syncVersion || 0) + 1,
     });
+
+    if (req.body.customerAddress) {
+      order.customerAddress = req.body.customerAddress.trim();
+      if (order.customerId) {
+        await Customer.findByIdAndUpdate(order.customerId, { address: req.body.customerAddress.trim() }).catch(() => {});
+      }
+    }
+    if (req.body.customerMobile) {
+      order.customerMobile = req.body.customerMobile.trim();
+      order.customerPhone = req.body.customerMobile.trim();
+    }
 
     if (req.body.deliveryDate) {
       order.deliveryDate = new Date(req.body.deliveryDate);

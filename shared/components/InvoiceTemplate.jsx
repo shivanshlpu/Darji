@@ -7,14 +7,19 @@ export const InvoiceTemplate = ({ invoice }) => {
   const items = invoice.items || [];
   const customer = invoice.customer || { name: '', phone: '', address: '' };
 
-  const subtotal = invoice.subtotal ?? items.reduce((acc, item) => acc + (item?.qty || 0) * (item?.price || 0), 0);
-  const discount = invoice.discount || 0;
+  const subtotal = invoice.subtotal !== undefined ? Math.round(invoice.subtotal) : items.reduce((acc, item) => acc + (item?.qty || 0) * (item?.price || 0), 0);
+  const discount = Math.round(invoice.discount || 0);
   const tax = invoice.tax || 0;
-  const extraCharges = invoice.extraCharges || 0;
-  const grandTotal = invoice.grandTotal ?? Math.round(subtotal - discount + tax + extraCharges);
+  const extraCharges = Math.round(invoice.extraCharges || 0);
+  const grandTotal = invoice.grandTotal !== undefined ? Math.round(invoice.grandTotal) : Math.max(0, Math.round(subtotal - discount + tax + extraCharges));
 
   const formattedInvoiceNo = (invoice.invoiceNumber || '').replace(/[^0-9]/g, '') || invoice.invoiceNumber || '';
   const formattedDate = invoice.date || '';
+
+  const paidAmount = invoice.paidAmount !== undefined ? Math.round(invoice.paidAmount) : (invoice.paid !== undefined ? Math.round(invoice.paid) : 0);
+  const balanceDue = invoice.balanceDue !== undefined ? Math.round(invoice.balanceDue) : (invoice.remaining !== undefined ? Math.round(invoice.remaining) : Math.max(0, grandTotal - paidAmount));
+  const isFullyPaid = balanceDue <= 0 && grandTotal > 0;
+  const paymentStatusText = isFullyPaid ? 'FULL PAID' : (paidAmount > 0 ? `PARTIALLY PAID (₹${paidAmount})` : 'UNPAID');
 
   const formatAmount = (num) => (num || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -27,7 +32,7 @@ export const InvoiceTemplate = ({ invoice }) => {
 
   const notesText = invoice.discountPercent && invoice.discountPercent > 0
     ? `DISCOUNT ${invoice.discountPercent}%`
-    : invoice.notes || 'GARMENTS NOT COLLECTED WITHIN 30 DAYS ARE NOT THE SHOP RESPONSIBILITY.';
+    : (discount > 0 ? `DISCOUNT APPLIED: ₹ ${formatAmount(discount)}` : (invoice.notes || 'GARMENTS NOT COLLECTED WITHIN 30 DAYS ARE NOT THE SHOP RESPONSIBILITY.'));
 
   const displayTitle = (invoice.shopName || 'Darji')
     .replace(/premium tailors/gi, '')
@@ -160,10 +165,18 @@ export const InvoiceTemplate = ({ invoice }) => {
               <span>Total Amount</span>
               <span>₹ {formatAmount(subtotal)}</span>
             </div>
-            <div className="target-tot-row">
-              <span>Discount</span>
-              <span>- ₹ {formatAmount(discount)}</span>
-            </div>
+            {discount > 0 && (
+              <div className="target-tot-row">
+                <span>Discount</span>
+                <span style={{ color: '#D97706', fontWeight: 700 }}>- ₹ {formatAmount(discount)}</span>
+              </div>
+            )}
+            {extraCharges > 0 && (
+              <div className="target-tot-row">
+                <span>Extra Charges</span>
+                <span>+ ₹ {formatAmount(extraCharges)}</span>
+              </div>
+            )}
             <div className="target-tot-row target-tot-row-grand">
               <span>GRAND TOTAL</span>
               <span>₹ {formatAmount(grandTotal)}</span>

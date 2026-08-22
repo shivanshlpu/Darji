@@ -112,11 +112,11 @@ export const sendInvoicePDF = async (req, res) => {
     const reviewLink = shopConfig.reviewLink?.trim() || 'https://g.page/r/CVIGyGz2VDeQEBM/review';
     const reviewUrl = /^https?:\/\//i.test(reviewLink) ? reviewLink : `https://${reviewLink}`;
 
-    let captionText = `Namaste ${customerName} ji! 🙏\nAttached is your official PDF Invoice #${invoiceNo} from *${shopName}*.\n\nTotal: ₹${totalAmount.toLocaleString('en-IN')}\nAdvance Paid: ₹${advancePaid.toLocaleString('en-IN')}\nBalance Due: ₹${balanceDue.toLocaleString('en-IN')}\n\n⭐ *Rate Your Experience / Leave Feedback:* \n${reviewUrl}\n\nThank you for choosing *${shopName}*!\n📞 Contact: ${shopPhone}`;
+    const captionText = `Namaste ${customerName} ji! 🙏\nAttached is your official PDF Invoice #${invoiceNo} from *${shopName}*.\n\nTotal Amount: ₹${totalAmount.toLocaleString('en-IN')}\n\n⭐ *Rate Your Experience / Leave Feedback:* \n${reviewUrl}\n\nThank you for choosing *${shopName}*!\n📞 Contact: ${shopPhone}`;
 
     // Send PDF document via WhatsApp Baileys Engine
     const result = await sendWhatsappMessage(targetMobile, captionText, pdfBuffer, req.user?.id, fileName);
-    res.json({ success: true, message: `PDF Invoice #${invoiceNo} sent to +91 ${targetMobile}!`, ...result });
+    res.json({ success: true, message: `PDF Invoice #${invoiceNo} sent to ${targetMobile}!`, ...result });
   } catch (err) {
     console.error('[WhatsApp Controller] sendInvoicePDF error:', err);
     res.status(500).json({ success: false, error: err.message });
