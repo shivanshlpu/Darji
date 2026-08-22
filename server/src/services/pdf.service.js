@@ -795,7 +795,7 @@ const generateInvoicePDFKit = async (order, shopInfo = {}) => {
           .quadraticCurveTo(sigX + 85, y - 10, sigX + 100, y + 12)
           .quadraticCurveTo(sigX + 110, y + 20, sigX + 120, y + 8)
           .stroke();
-        doc.fontSize(9).font('Helvetica-Bold').fillColor(goldDark).text('Shivansh', sigX + 15, y + 18);
+        doc.fontSize(9).font('Helvetica-Bold').fillColor(goldDark).text('Arunav', sigX + 15, y + 18);
         doc.restore();
       }
 

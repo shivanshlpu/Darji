@@ -26,7 +26,7 @@ export default function SettingsPage() {
 
   // Live WhatsApp Test Message Sender State
   const [testMobile, setTestMobile] = useState('');
-  const [testMsgText, setTestMsgText] = useState('Hello Shivansh! This is a live test message from Darji ERP.');
+  const [testMsgText, setTestMsgText] = useState('Hello Arunav! This is a live test message from Darji ERP.');
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [testSendResult, setTestSendResult] = useState(null);
 

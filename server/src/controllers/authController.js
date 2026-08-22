@@ -132,9 +132,9 @@ export const seedDefaultData = async () => {
   await User.create([
     {
       shopId: shop._id,
-      name: 'Shivansh Darji',
+      name: 'Arunav Darji',
       phone: defaultPhone,
-      email: 'shivansh@darjitailors.com',
+      email: 'arunav@darjitailors.com',
       passwordHash: ownerHash,
       role: 'owner',
       permissions: ['all'],

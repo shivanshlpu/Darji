@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Users, ClipboardList, FileText, Wallet,
@@ -9,6 +9,7 @@ import useAuthStore from '../../store/authStore';
 import useAppStore from '../../store/appStore';
 import usePrivacyStore from '../../store/privacyStore';
 import useLanguageStore from '../../store/languageStore';
+import ProfileModal from '../ProfileModal';
 import './Sidebar.css';
 
 const navItems = [
@@ -26,6 +27,7 @@ export default function Sidebar() {
   const { sidebarCollapsed, toggleSidebar } = useAppStore();
   const { isAmountHidden } = usePrivacyStore();
   const { t } = useLanguageStore();
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   const filteredNavItems = useMemo(() => {
     if (isAmountHidden) {
@@ -77,20 +79,42 @@ export default function Sidebar() {
       </nav>
 
       {/* User Card */}
-      <div className="sidebar__user">
+      <div
+        className="sidebar__user"
+        onClick={() => setShowProfileModal(true)}
+        style={{ cursor: 'pointer' }}
+        title="Click to view & edit user profile"
+      >
         <div className="sidebar__user-avatar">
-          {user?.name?.charAt(0) || 'D'}
+          {user?.avatarUrl ? (
+            <img src={user.avatarUrl} alt={user.name || 'User'} className="sidebar__user-avatar-img" />
+          ) : (
+            user?.name?.charAt(0) || 'A'
+          )}
         </div>
         {!sidebarCollapsed && (
           <div className="sidebar__user-info">
-            <p className="sidebar__user-name">{user?.name || 'Tailor Admin'}</p>
-            <p className="sidebar__user-role">{user?.shopName || 'Darji Tailors'}</p>
+            <p className="sidebar__user-name">{user?.name || 'Arunav Darji'}</p>
+            <p className="sidebar__user-role">{user?.shopName || 'Darji Premium Tailors'}</p>
           </div>
         )}
-        <button className="sidebar__logout" onClick={logout} title="Logout">
+        <button
+          className="sidebar__logout"
+          onClick={(e) => {
+            e.stopPropagation();
+            logout();
+          }}
+          title="Logout"
+        >
           <LogOut size={18} />
         </button>
       </div>
+
+      {/* Profile & Account Modal */}
+      <ProfileModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+      />
     </aside>
   );
 }

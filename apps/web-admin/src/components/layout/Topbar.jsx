@@ -6,6 +6,7 @@ import useAppStore from '../../store/appStore';
 import useAuthStore from '../../store/authStore';
 import usePrivacyStore from '../../store/privacyStore';
 import useLanguageStore from '../../store/languageStore';
+import ProfileModal from '../ProfileModal';
 import './Topbar.css';
 
 export default function Topbar({ pageTitle }) {
@@ -17,6 +18,7 @@ export default function Topbar({ pageTitle }) {
   const { isAmountHidden, toggleAmountHidden } = usePrivacyStore();
   const { language, toggleLanguage } = useLanguageStore();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const notifRef = useRef(null);
   const unreadCount = getUnreadCount();
 
@@ -146,9 +148,20 @@ export default function Topbar({ pageTitle }) {
 
         {/* User & Logout */}
         <div className="topbar__user" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div className="topbar__user-avatar" title={`Logged in as ${user?.name || 'Owner'} (${user?.phone || ''})`}>
-            {user?.name?.charAt(0) || 'U'}
-          </div>
+          <button
+            type="button"
+            className="topbar__user-avatar-btn"
+            onClick={() => setShowProfileModal(true)}
+            title={`Logged in as ${user?.name || 'Arunav Darji'} (${user?.phone || '9479487828'}) - Click to view/edit profile`}
+          >
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt={user.name || 'User'} className="topbar__user-avatar-img" />
+            ) : (
+              <div className="topbar__user-avatar">
+                {user?.name?.charAt(0) || 'A'}
+              </div>
+            )}
+          </button>
           <button
             className="topbar__icon-btn"
             onClick={() => {
@@ -163,6 +176,12 @@ export default function Topbar({ pageTitle }) {
           </button>
         </div>
       </div>
+
+      {/* Profile & Account Modal */}
+      <ProfileModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+      />
     </header>
   );
 }

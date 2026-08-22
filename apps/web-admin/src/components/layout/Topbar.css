@@ -233,7 +233,25 @@
   margin-top: 6px;
 }
 
-/* User Avatar */
+/* User Avatar Button & Image */
+.topbar__user-avatar-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  outline: none;
+  transition: transform var(--transition-fast), filter var(--transition-fast);
+}
+
+.topbar__user-avatar-btn:hover {
+  transform: scale(1.08);
+  filter: drop-shadow(0 0 6px rgba(201, 162, 75, 0.45));
+}
+
 .topbar__user-avatar {
   width: 36px;
   height: 36px;
@@ -242,7 +260,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
+  font-weight: 700;
   font-size: var(--text-sm);
   color: var(--color-gold-300);
   border: 2px solid var(--color-gold-500);
@@ -250,8 +268,14 @@
   transition: box-shadow var(--transition-fast);
 }
 
-.topbar__user-avatar:hover {
-  box-shadow: var(--shadow-gold);
+.topbar__user-avatar-img {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  border: 2px solid var(--color-gold-500);
+  background: #ffffff;
+  display: block;
 }
 
 /* Responsive */

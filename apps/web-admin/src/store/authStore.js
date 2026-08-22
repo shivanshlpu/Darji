@@ -4,7 +4,13 @@ import { api } from '../services/apiClient';
 const storedUser = (() => {
   try {
     const item = localStorage.getItem('darji_user');
-    return item ? JSON.parse(item) : null;
+    if (!item) return null;
+    const parsed = JSON.parse(item);
+    if (parsed && typeof parsed.name === 'string' && parsed.name.toLowerCase().includes('shivansh')) {
+      parsed.name = 'Arunav Darji';
+      localStorage.setItem('darji_user', JSON.stringify(parsed));
+    }
+    return parsed;
   } catch (e) {
     return null;
   }
@@ -27,7 +33,7 @@ const OWNER_PHONE_SHA256 = '8dfa48b9f613429714e27baf7bd3b5343b1a35e787510c548be1
 const OWNER_PASS_SHA256 = '15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225';
 
 const useAuthStore = create((set) => ({
-  user: storedUser ? { ...storedUser, role: 'owner', permissions: ['all'] } : null,
+  user: storedUser ? { ...storedUser, role: storedUser.role || 'owner', permissions: storedUser.permissions || ['all'] } : null,
   isAuthenticated: !!storedUser,
   isLoading: false,
   error: null,
@@ -64,7 +70,7 @@ const useAuthStore = create((set) => ({
     if (isCustomMatch || isEnvMatch || isHashOwnerMatch || (cleanDigits && password && password.length >= 6)) {
       const user = {
         _id: 'user_001',
-        name: cleanDigits === '8888888888' ? 'Sunil Kumar' : 'Shivansh Darji',
+        name: cleanDigits === '8888888888' ? 'Sunil Kumar' : 'Arunav Darji',
         phone: cleanDigits || envAdminPhone || '9479487828',
         email: 'darjithetailoringshop@gmail.com',
         role: 'owner',
@@ -79,6 +85,22 @@ const useAuthStore = create((set) => ({
 
     set({ isLoading: false, error: 'Invalid phone number or password' });
     return false;
+  },
+
+  updateProfile: (updatedFields) => {
+    set((state) => {
+      const updatedUser = {
+        ...(state.user || {}),
+        ...updatedFields,
+      };
+      try {
+        localStorage.setItem('darji_user', JSON.stringify(updatedUser));
+      } catch (e) {
+        console.warn('Failed to persist user profile:', e);
+      }
+      return { user: updatedUser };
+    });
+    return { success: true };
   },
 
   updatePassword: async (currentPassword, newPassword) => {
@@ -112,7 +134,11 @@ const useAuthStore = create((set) => ({
     if (stored) {
       try {
         const user = JSON.parse(stored);
-        set({ user: { ...user, role: 'owner', permissions: ['all'] }, isAuthenticated: true });
+        if (user && typeof user.name === 'string' && user.name.toLowerCase().includes('shivansh')) {
+          user.name = 'Arunav Darji';
+          localStorage.setItem('darji_user', JSON.stringify(user));
+        }
+        set({ user: { ...user, role: user.role || 'owner', permissions: user.permissions || ['all'] }, isAuthenticated: true });
       } catch {
         // Clear broken session
       }
