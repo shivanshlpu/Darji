@@ -3,7 +3,7 @@ import { useNavigate, Navigate } from 'react-router-dom';
 import {
   BarChart3, TrendingUp, TrendingDown, Download, Calendar,
   PieChart as PieIcon, DollarSign, Users, FileSpreadsheet, FileText, Filter,
-  Tag, Percent, Eye, X
+  Tag, Percent, Eye, X, CreditCard, CheckCircle, IndianRupee, ArrowUpRight
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -17,6 +17,7 @@ import useLanguageStore from '../store/languageStore';
 import { printReportPDF } from '../utils/generateReportPDF';
 import { exportReportExcel } from '../utils/generateReportExcel';
 import { EXPENSE_CATEGORIES } from '../constants';
+import PaymentHistoryModal from '../components/PaymentHistoryModal';
 import './Reports.css';
 
 const COLORS = ['#C9A24B', '#1565C0', '#2E7D32', '#C62828', '#8E24AA'];
@@ -44,6 +45,21 @@ const formatDateDMY = (dateObj) => {
   return `${day}-${month}-${year}`;
 };
 
+const formatDateTimeDMY = (dateObj) => {
+  if (!dateObj || isNaN(new Date(dateObj).getTime())) return '';
+  const d = new Date(dateObj);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  const dateStr = `${day}-${month}-${year}`;
+  const hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const formattedHours = hours % 12 || 12;
+  const timeStr = `${formattedHours}:${minutes} ${ampm}`;
+  return `${dateStr}, ${timeStr}`;
+};
+
 export default function Reports() {
   const navigate = useNavigate();
   const { orders, expenses } = useAppStore();
@@ -56,6 +72,7 @@ export default function Reports() {
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(new Date().toISOString().slice(0, 10));
   const [selectedDiscountModalOrder, setSelectedDiscountModalOrder] = useState(null);
+  const [selectedPaymentHistoryOrder, setSelectedPaymentHistoryOrder] = useState(null);
 
   useEffect(() => {
     if (isAmountHidden) {
@@ -177,6 +194,63 @@ export default function Reports() {
     return filteredOrders.filter(o => (o.discount || 0) > 0);
   }, [filteredOrders]);
 
+  // Customer Payment Collections Ledger for the selected date range
+  const periodPayments = useMemo(() => {
+    const list = [];
+    (orders || []).forEach(o => {
+      if (Array.isArray(o.payments) && o.payments.length > 0) {
+        o.payments.forEach(p => {
+          const pDate = p.date ? new Date(p.date) : null;
+          if (pDate && !isNaN(pDate.getTime()) && pDate >= effectiveDateRange.from && pDate <= effectiveDateRange.to) {
+            list.push({
+              _id: p._id || `${o._id}_${pDate.getTime()}`,
+              orderId: o._id,
+              orderNumber: o.orderNumber,
+              tokenNumber: o.tokenNumber,
+              customerName: o.customerName || (o.customer && o.customer.name) || 'Customer',
+              customerMobile: o.customerMobile || o.customerPhone || (o.customer && o.customer.mobile) || '',
+              paymentDate: pDate,
+              amount: Number(p.amount) || 0,
+              mode: p.mode || 'cash',
+              type: p.type || 'payment',
+              notes: p.notes || '',
+              orderGrandTotal: o.grandTotal || o.totalAmount || o.subtotal || 0,
+              orderBalanceDue: o.pendingAmount || o.balanceDue || 0,
+              orderStatus: o.status,
+              order: o,
+            });
+          }
+        });
+      } else {
+        const d = new Date(o.orderDate || o.createdAt);
+        if (!isNaN(d.getTime()) && d >= effectiveDateRange.from && d <= effectiveDateRange.to) {
+          const amt = Number(o.paidAmount) || Number(o.advancePaid) || 0;
+          if (amt > 0) {
+            list.push({
+              _id: `${o._id}_legacy`,
+              orderId: o._id,
+              orderNumber: o.orderNumber,
+              tokenNumber: o.tokenNumber,
+              customerName: o.customerName || (o.customer && o.customer.name) || 'Customer',
+              customerMobile: o.customerMobile || o.customerPhone || (o.customer && o.customer.mobile) || '',
+              paymentDate: d,
+              amount: amt,
+              mode: 'cash',
+              type: o.paymentStatus === 'paid' ? 'final' : 'advance',
+              notes: 'Initial recorded payment',
+              orderGrandTotal: o.grandTotal || o.totalAmount || o.subtotal || 0,
+              orderBalanceDue: o.pendingAmount || o.balanceDue || 0,
+              orderStatus: o.status,
+              order: o,
+            });
+          }
+        }
+      }
+    });
+
+    return list.sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate));
+  }, [orders, effectiveDateRange]);
+
   // Expense breakdown chart data
   const expenseChartData = useMemo(() => {
     const map = {};
@@ -258,6 +332,17 @@ export default function Reports() {
         discountValue: o.discountValue !== undefined ? o.discountValue : o.discount,
         grandTotal: o.grandTotal || o.totalAmount || 0,
       })),
+      paymentsLedger: periodPayments.map(p => ({
+        orderNumber: p.orderNumber,
+        tokenNumber: p.tokenNumber,
+        customerName: p.customerName,
+        customerMobile: p.customerMobile,
+        date: formatDateTimeDMY(p.paymentDate),
+        amount: p.amount,
+        mode: p.mode,
+        type: p.type,
+        notes: p.notes,
+      })),
       expenses: filteredExpenses.map(e => ({
         date: formatDateDMY(e.date || e.createdAt),
         type: e.type || 'expense',
@@ -308,6 +393,17 @@ export default function Reports() {
         discountType: o.discountType || 'amount',
         discountValue: o.discountValue !== undefined ? o.discountValue : o.discount,
         grandTotal: o.grandTotal || o.totalAmount || 0,
+      })),
+      paymentsLedger: periodPayments.map(p => ({
+        orderNumber: p.orderNumber,
+        tokenNumber: p.tokenNumber,
+        customerName: p.customerName,
+        customerMobile: p.customerMobile,
+        date: formatDateTimeDMY(p.paymentDate),
+        amount: p.amount,
+        mode: p.mode,
+        type: p.type,
+        notes: p.notes,
       })),
       expenses: filteredExpenses.map(e => ({
         date: formatDateDMY(e.date || e.createdAt),
@@ -465,6 +561,129 @@ export default function Reports() {
               <div style={{ height: '260px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}>
                 No customer data for selected period
               </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Customer Payment Collections Ledger Section */}
+      <div className="reports__payment-tracker-section" style={{ marginTop: '12px' }}>
+        <div className="reports__chart-card" style={{ borderTop: '4px solid #10b981' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '8px', borderRadius: '8px', display: 'flex', color: '#16a34a' }}>
+                <CheckCircle size={20} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                  {language === 'hi' ? '💰 ग्राहक भुगतान व संग्रह विवरण (Payment Collections Ledger)' : '💰 Customer Payment Collections Ledger'}
+                </h3>
+                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  {language === 'hi' ? 'किस ग्राहक ने कब, कितना और किस माध्यम (Cash/UPI/Card) से भुगतान किया' : 'Real-time record of who paid, exact date & time, amount received, and payment mode'}
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, background: '#dcfce7', color: '#15803d', padding: '4px 14px', borderRadius: '20px', border: '1px solid #86efac' }}>
+                {periodPayments.length} {language === 'hi' ? 'भुगतान प्राप्त हुए' : 'payments'} • Total {formatAmount(periodPayments.reduce((s, p) => s + p.amount, 0))}
+              </span>
+            </div>
+          </div>
+
+          <div className="reports__payment-table-wrapper" style={{ overflowX: 'auto' }}>
+            {periodPayments.length === 0 ? (
+              <div style={{ padding: '36px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                <CreditCard size={40} color="#cbd5e1" style={{ marginBottom: '8px' }} />
+                <p style={{ fontWeight: 600, fontSize: '14px', margin: 0 }}>
+                  {language === 'hi' ? 'चुनी गई अवधि में कोई भुगतान दर्ज नहीं हुआ है।' : 'No payment collections recorded for the selected date period.'}
+                </p>
+              </div>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', textAlign: 'left', color: '#475569', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    <th style={{ padding: '10px 14px' }}>{language === 'hi' ? 'ग्राहक का नाम' : 'Customer Name'}</th>
+                    <th style={{ padding: '10px 14px' }}>{language === 'hi' ? 'ऑर्डर / टोकन #' : 'Order / Token'}</th>
+                    <th style={{ padding: '10px 14px' }}>{language === 'hi' ? 'भुगतान तारीख व समय' : 'Payment Date & Time'}</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'right' }}>{language === 'hi' ? 'जमा राशि' : 'Amount Paid'}</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center' }}>{language === 'hi' ? 'माध्यम (Mode)' : 'Mode'}</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center' }}>{language === 'hi' ? 'प्रकार (Type)' : 'Type'}</th>
+                    <th style={{ padding: '10px 14px' }}>{language === 'hi' ? 'नोट्स / मेमो' : 'Notes'}</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center' }}>{language === 'hi' ? 'एक्शन' : 'Action'}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {periodPayments.map((p) => {
+                    const modeBadges = {
+                      cash: { label: 'Cash 💵', bg: '#dcfce7', color: '#15803d', border: '#86efac' },
+                      upi: { label: 'UPI 📱', bg: '#dbeafe', color: '#1d4ed8', border: '#93c5fd' },
+                      card: { label: 'Card 💳', bg: '#f3e8ff', color: '#7e22ce', border: '#d8b4fe' },
+                      bankTransfer: { label: 'Bank 🏦', bg: '#fef3c7', color: '#b45309', border: '#fde68a' },
+                    };
+                    const badge = modeBadges[p.mode] || modeBadges.cash;
+
+                    return (
+                      <tr
+                        key={p._id}
+                        style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}
+                        className="reports__payment-row"
+                        onClick={() => setSelectedPaymentHistoryOrder(p.order)}
+                      >
+                        <td style={{ padding: '12px 14px', fontWeight: 600 }}>
+                          <div style={{ color: 'var(--text-primary)' }}>{p.customerName}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 400 }}>{p.customerMobile || ''}</div>
+                        </td>
+                        <td style={{ padding: '12px 14px', fontFamily: 'monospace', fontWeight: 600, color: '#2563eb' }}>
+                          {p.orderNumber} ({p.tokenNumber || 'T-100'})
+                        </td>
+                        <td style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                          {formatDateTimeDMY(p.paymentDate)}
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800, color: '#16a34a', fontSize: '14px' }}>
+                          + {formatAmount(p.amount)}
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 700, background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`, padding: '3px 9px', borderRadius: '12px', textTransform: 'capitalize' }}>
+                            {badge.label}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 600, background: '#f1f5f9', color: '#475569', padding: '3px 8px', borderRadius: '6px', textTransform: 'capitalize' }}>
+                            {p.type}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 14px', color: 'var(--text-secondary)', fontSize: '12px', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {p.notes || '-'}
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            style={{
+                              background: '#eff6ff',
+                              border: '1px solid #bfdbfe',
+                              color: '#1d4ed8',
+                              borderRadius: '6px',
+                              padding: '5px 12px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedPaymentHistoryOrder(p.order);
+                            }}
+                          >
+                            <CreditCard size={13} /> {language === 'hi' ? 'लेजर / तारीख' : 'Adjust / Ledger'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
           </div>
         </div>
@@ -655,6 +874,12 @@ export default function Reports() {
           </div>
         </div>
       )}
+      {/* Payment History & Date Adjustment Modal */}
+      <PaymentHistoryModal
+        isOpen={!!selectedPaymentHistoryOrder}
+        onClose={() => setSelectedPaymentHistoryOrder(null)}
+        order={selectedPaymentHistoryOrder ? (orders.find(o => o._id === selectedPaymentHistoryOrder._id || o.orderNumber === selectedPaymentHistoryOrder.orderNumber) || selectedPaymentHistoryOrder) : null}
+      />
     </div>
   );
 }

@@ -266,3 +266,12 @@
     width: 100% !important;
   }
 }
+
+.reports__payment-row:hover {
+  background: #f0fdf4;
+}
+
+.reports__discount-row:hover {
+  background: #fffbeb;
+}
+

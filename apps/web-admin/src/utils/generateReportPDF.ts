@@ -36,6 +36,17 @@ export interface ReportPDFData {
     discountValue?: number;
     grandTotal: number;
   }>;
+  paymentsLedger?: Array<{
+    orderNumber: string;
+    tokenNumber?: string;
+    customerName: string;
+    customerMobile?: string;
+    date: string;
+    amount: number;
+    mode: string;
+    type: string;
+    notes?: string;
+  }>;
   orders: Array<{
     orderNumber: string;
     tokenNumber?: string;
@@ -73,6 +84,7 @@ export function generateReportPDFHTML(data: ReportPDFData): string {
   const orders = data.orders || [];
   const expenses = data.expenses || [];
   const discountsLedger = data.discountsLedger || [];
+  const paymentsLedger = data.paymentsLedger || [];
 
   return `
 <!DOCTYPE html>
@@ -356,6 +368,37 @@ export function generateReportPDFHTML(data: ReportPDFData): string {
           <td>${formatINR(d.subtotal)}</td>
           <td style="color: #d97706; font-weight: 700;">- ${formatINR(d.discount)} ${d.discountType === 'percent' ? `(${d.discountValue}%)` : ''}</td>
           <td style="color: #166534; font-weight: 700;">${formatINR(d.grandTotal)}</td>
+        </tr>
+      `).join('')}
+    </tbody>
+  </table>
+  ` : ''}
+
+  <!-- Payment Collections Table -->
+  ${paymentsLedger.length > 0 ? `
+  <div class="section-title">
+    <span>💰 ${isHi ? 'ग्राहक भुगतान व संग्रह विवरण (Payment Collections Ledger)' : 'Customer Payment Collections Ledger'} (${paymentsLedger.length})</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>${isHi ? 'तारीख व समय' : 'DATE & TIME'}</th>
+        <th>${isHi ? 'ऑर्डर / टोकन #' : 'ORDER / TOKEN'}</th>
+        <th>${isHi ? 'ग्राहक का नाम' : 'CUSTOMER'}</th>
+        <th>${isHi ? 'माध्यम' : 'MODE'}</th>
+        <th>${isHi ? 'प्रकार' : 'TYPE'}</th>
+        <th>${isHi ? 'जमा राशि' : 'AMOUNT PAID'}</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${paymentsLedger.map(p => `
+        <tr>
+          <td>${p.date}</td>
+          <td><strong>${p.orderNumber}</strong> (${p.tokenNumber || 'T-100'})</td>
+          <td>${p.customerName} ${p.customerMobile ? `(${p.customerMobile})` : ''}</td>
+          <td><span style="font-weight: 700; text-transform: uppercase;">${p.mode}</span></td>
+          <td style="text-transform: capitalize;">${p.type}</td>
+          <td style="color: #166534; font-weight: 700;">+ ${formatINR(p.amount)}</td>
         </tr>
       `).join('')}
     </tbody>

@@ -65,6 +65,40 @@ export function exportReportExcel(data: ReportPDFData) {
         </tbody>
       </table>
 
+      ${(data.paymentsLedger && data.paymentsLedger.length > 0) ? `
+      <div class="section-title">💰 CUSTOMER PAYMENT COLLECTIONS LEDGER (${data.paymentsLedger.length} Payments Collected)</div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Payment Date & Time</th>
+            <th>Order #</th>
+            <th>Token #</th>
+            <th>Customer Name</th>
+            <th>Mode</th>
+            <th>Type</th>
+            <th style="text-align: right;">Amount Paid (₹)</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.paymentsLedger.map((p, idx) => `
+            <tr>
+              <td>${idx + 1}</td>
+              <td>${p.date}</td>
+              <td><b>${p.orderNumber}</b></td>
+              <td>${p.tokenNumber || '-'}</td>
+              <td>${p.customerName} ${p.customerMobile ? `(${p.customerMobile})` : ''}</td>
+              <td><b>${p.mode.toUpperCase()}</b></td>
+              <td>${p.type}</td>
+              <td class="amount paid">+ ₹ ${p.amount.toLocaleString('en-IN')}</td>
+              <td>${p.notes || '-'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      ` : ''}
+
       ${(data.discountsLedger && data.discountsLedger.length > 0) ? `
       <div class="section-title">🏷️ CUSTOMER DISCOUNT LEDGER (${data.discountsLedger.length} Discounted Orders)</div>
       <table>
