@@ -264,20 +264,78 @@ export default function Reports() {
   // Top 5 High Value Customers
   const topCustomersData = useMemo(() => {
     const custMap = {};
-    filteredOrders.forEach(o => {
-      const cId = o.customerId || (o.customer && o.customer._id) || o.customerName || 'Unknown';
-      const cName = (o.customer && o.customer.name) || o.customerName || 'Unknown';
-      if (!custMap[cId]) {
-        custMap[cId] = { name: cName.split(' ')[0], spending: 0 };
+
+    (filteredOrders || []).forEach(o => {
+      if (!o) return;
+
+      // Robust extraction of unique customer identifier
+      let cId = null;
+      if (typeof o.customerId === 'string' && o.customerId.trim()) {
+        cId = o.customerId.trim();
+      } else if (o.customerId && typeof o.customerId === 'object') {
+        cId = o.customerId._id ? String(o.customerId._id) : (o.customerId.id ? String(o.customerId.id) : null);
       }
-      custMap[cId].spending += (o.subtotal || o.totalAmount || 0);
+
+      if (!cId && o.customer) {
+        if (typeof o.customer === 'string' && o.customer.trim()) {
+          cId = o.customer.trim();
+        } else if (typeof o.customer === 'object') {
+          cId = o.customer._id ? String(o.customer._id) : (o.customer.id ? String(o.customer.id) : null);
+        }
+      }
+
+      const mobile = String(o.customerMobile || o.customerPhone || (o.customer && typeof o.customer === 'object' && o.customer.mobile) || '').trim();
+      const rawName = (
+        (o.customer && typeof o.customer === 'object' && o.customer.name) ||
+        (o.customerId && typeof o.customerId === 'object' && o.customerId.name) ||
+        o.customerName ||
+        ''
+      ).trim();
+
+      // If still no ID, use unique mobile or name or order ID
+      if (!cId) {
+        if (mobile) {
+          cId = `phone_${mobile}`;
+        } else if (rawName) {
+          cId = `name_${rawName.toLowerCase()}`;
+        } else {
+          cId = `order_${o._id || o.orderNumber || Math.random()}`;
+        }
+      }
+
+      // Try resolving full display name from customers store if available
+      let displayName = rawName;
+      if (!displayName && customers && customers.length > 0) {
+        const found = customers.find(c => String(c._id) === String(cId) || (mobile && String(c.mobile).includes(mobile)));
+        if (found && found.name) {
+          displayName = found.name;
+        }
+      }
+      if (!displayName) {
+        displayName = 'Customer';
+      }
+
+      // Compute actual net order amount (grandTotal after discount, or totalAmount)
+      const orderAmount = Number(o.grandTotal) || Number(o.totalAmount) || Math.max(0, (Number(o.subtotal) || 0) - (Number(o.discount) || 0)) || Number(o.subtotal) || 0;
+
+      if (!custMap[cId]) {
+        custMap[cId] = {
+          name: displayName.length > 15 ? `${displayName.slice(0, 13)}...` : displayName,
+          fullName: displayName,
+          spending: 0,
+          orderCount: 0,
+        };
+      }
+
+      custMap[cId].spending += orderAmount;
+      custMap[cId].orderCount += 1;
     });
-    
+
     return Object.values(custMap)
       .filter(c => c.spending > 0)
       .sort((a, b) => b.spending - a.spending)
       .slice(0, 5);
-  }, [filteredOrders]);
+  }, [filteredOrders, customers]);
 
   const dateRangeStr = useMemo(() => {
     return `${formatDateDMY(effectiveDateRange.from)} to ${formatDateDMY(effectiveDateRange.to)}`;
@@ -553,7 +611,10 @@ export default function Reports() {
                     }} 
                     tick={{ fontSize: 12 }} 
                   />
-                  <Tooltip formatter={(value) => [formatAmount(value), 'Total Spent']} />
+                  <Tooltip
+                    formatter={(value) => [formatAmount(value), 'Total Spent']}
+                    labelFormatter={(label, items) => items?.[0]?.payload?.fullName || label}
+                  />
                   <Bar dataKey="spending" fill="#C9A24B" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

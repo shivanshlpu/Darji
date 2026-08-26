@@ -78,8 +78,10 @@ export default function Dashboard() {
     const custKeys = new Set();
     (orders || []).forEach(o => {
       if (!['completed', 'delivered', 'cancelled'].includes(o.status) && (o.pendingAmount || 0) > 0) {
-        if (o.customerId) custKeys.add(o.customerId);
-        else if (o.customerName) custKeys.add(o.customerName);
+        const cId = typeof o.customerId === 'object' && o.customerId !== null
+          ? String(o.customerId._id || o.customerId.id || o.customerId.name || '')
+          : String(o.customerId || o.customerMobile || o.customerName || o._id);
+        if (cId) custKeys.add(cId);
       }
     });
     return custKeys.size;
