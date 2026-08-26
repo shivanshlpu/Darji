@@ -5,7 +5,7 @@ import { auditLog } from '../middleware/audit.js';
 import { login, getMe, updatePassword } from '../controllers/authController.js';
 import { getCustomers, getCustomerById, createCustomer, updateCustomer, deleteCustomer } from '../controllers/customerController.js';
 import { getCustomerMeasurements, createMeasurementVersion } from '../controllers/measurementController.js';
-import { getOrders, createOrder, updateOrder, deleteOrder, markOrderAsPaid, updateOrderStatus } from '../controllers/orderController.js';
+import { getOrders, createOrder, updateOrder, deleteOrder, markOrderAsPaid, updateOrderStatus, addOrderPayment, updateOrderPayment, deleteOrderPayment, migrateExistingOrderPayments } from '../controllers/orderController.js';
 import { addPayment } from '../controllers/paymentController.js';
 import { createInvoice } from '../controllers/invoiceController.js';
 import { getExpenses, createExpense, deleteExpense } from '../controllers/expenseController.js';
@@ -40,13 +40,16 @@ router.post('/measurements', protect, auditLog('Measurement', 'CREATE_VERSION'),
 // Orders
 router.get('/orders', protect, getOrders);
 router.post('/orders', protect, auditLog('Order', 'CREATE'), createOrder);
+router.post('/orders/migrate-payments', protect, auditLog('Order', 'MIGRATE_PAYMENTS'), migrateExistingOrderPayments);
 router.put('/orders/:id', protect, auditLog('Order', 'UPDATE'), updateOrder);
 router.delete('/orders/:id', protect, auditLog('Order', 'DELETE'), deleteOrder);
 router.post('/orders/:id/mark-paid', protect, auditLog('Order', 'MARK_PAID'), markOrderAsPaid);
 router.patch('/orders/:id/status', protect, auditLog('Order', 'STATUS_TRANSITION'), updateOrderStatus);
 
-// Payments
-router.post('/orders/:id/payments', protect, auditLog('Payment', 'CREATE'), addPayment);
+// Payments on Orders
+router.post('/orders/:id/payments', protect, auditLog('Payment', 'CREATE'), addOrderPayment);
+router.put('/orders/:id/payments/:paymentId', protect, auditLog('Payment', 'UPDATE'), updateOrderPayment);
+router.delete('/orders/:id/payments/:paymentId', protect, auditLog('Payment', 'DELETE'), deleteOrderPayment);
 
 // Invoices
 router.post('/orders/:id/invoice', protect, auditLog('Invoice', 'CREATE'), createInvoice);

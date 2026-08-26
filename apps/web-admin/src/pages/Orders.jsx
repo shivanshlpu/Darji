@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   Search, Filter, Plus, Eye, ClipboardList, Package, Clock,
-  ChevronRight, SortAsc, SortDesc, X, CheckCircle, UserCheck, Printer, FileText, Share2, Tag, Edit, MessageCircle, Ruler, Sparkles, Calendar, Trash2
+  ChevronRight, SortAsc, SortDesc, X, CheckCircle, UserCheck, Printer, FileText, Share2, Tag, Edit, MessageCircle, Ruler, Sparkles, Calendar, Trash2, CreditCard
 } from 'lucide-react';
 import useAppStore from '../store/appStore';
 import useCustomerStore from '../store/customerStore';
@@ -12,6 +12,7 @@ import { ORDER_STATUSES, PAYMENT_STATUSES, PRIORITIES, MEASUREMENT_CATEGORIES, G
 import { printInvoiceHTML } from '../../../../shared/utils/generateInvoice';
 import { InvoiceTemplate } from '../../../../shared/components/InvoiceTemplate';
 import CustomerEditModal from '../components/CustomerEditModal';
+import PaymentHistoryModal from '../components/PaymentHistoryModal';
 import useLanguageStore from '../store/languageStore';
 import { apiClient } from '../services/apiClient';
 import './Orders.css';
@@ -65,6 +66,7 @@ export default function Orders() {
   const [sortBy, setSortBy] = useState('newest'); // 'newest' | 'oldest' | 'deliveryDate'
   const [dismissDuplicateNotice, setDismissDuplicateNotice] = useState(false);
   const [editingCustomerData, setEditingCustomerData] = useState(null);
+  const [paymentHistoryOrder, setPaymentHistoryOrder] = useState(null);
   const [toastMsg, setToastMsg] = useState(null);
 
   const showToast = (msg) => {
@@ -211,8 +213,14 @@ export default function Orders() {
       e.preventDefault();
       e.stopPropagation();
     }
-    markOrderPaid(order._id);
-    apiClient.markOrderAsPaid(order._id).catch(() => {});
+    const tokenOrNum = order.tokenNumber ? `Token #${order.tokenNumber}` : order.orderNumber;
+    const pendingAmt = order.balanceDue !== undefined ? order.balanceDue : order.pendingAmount;
+    markOrderPaid(order._id, {
+      paymentDate: new Date().toISOString(),
+      mode: 'cash',
+      notes: 'Marked paid from orders card',
+    });
+    showToast(language === 'hi' ? `✅ ${tokenOrNum} (₹${pendingAmt}) आज की तारीख में Paid दर्ज हो गया!` : `✅ ${tokenOrNum} (₹${pendingAmt}) marked as PAID with today's date!`);
   };
 
   // Quick Reschedule Expected Delivery Date directly from Order Card Front
@@ -1309,6 +1317,20 @@ export default function Orders() {
                       <Trash2 size={15} /> {language === 'hi' ? 'डिलीट ऑर्डर' : 'Delete Order'}
                     </button>
 
+                    <button
+                      type="button"
+                      className="orders__trans-btn"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setPaymentHistoryOrder(order);
+                      }}
+                      title={language === 'hi' ? 'भुगतान लेजर व तारीख संपादन' : 'Payment History & Date Adjustment'}
+                      style={{ background: 'rgba(217, 119, 6, 0.1)', color: '#d97706', borderColor: 'rgba(217, 119, 6, 0.3)' }}
+                    >
+                      <CreditCard size={15} /> {language === 'hi' ? 'भुगतान तारीख' : 'Payment & Dates'}
+                    </button>
+
                     {(order.balanceDue !== undefined ? order.balanceDue : order.pendingAmount) > 0 && (
                       <button
                         type="button"
@@ -2106,6 +2128,13 @@ export default function Orders() {
           </div>
         </div>
       )}
+
+      {/* Payment History & Date Adjustment Modal */}
+      <PaymentHistoryModal
+        isOpen={!!paymentHistoryOrder}
+        onClose={() => setPaymentHistoryOrder(null)}
+        order={paymentHistoryOrder ? (orders.find(o => o._id === paymentHistoryOrder._id || o.orderNumber === paymentHistoryOrder.orderNumber) || paymentHistoryOrder) : null}
+      />
 
       {/* Customer Edit Details & Measurements Modal */}
       <CustomerEditModal

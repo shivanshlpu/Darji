@@ -16,6 +16,16 @@ const timelineSchema = new mongoose.Schema({
   updatedBy: { type: String, default: 'Admin' },
 });
 
+const paymentRecordSchema = new mongoose.Schema({
+  amount: { type: Number, required: true },
+  mode: { type: String, enum: ['cash', 'upi', 'card', 'bankTransfer'], default: 'cash' },
+  type: { type: String, enum: ['advance', 'partial', 'final'], default: 'advance' },
+  date: { type: Date, default: Date.now },
+  notes: { type: String, default: '' },
+  receivedBy: { type: String, default: 'Admin' },
+  referenceId: { type: String, default: '' },
+});
+
 const orderSchema = new mongoose.Schema(
   {
     shopId: { type: mongoose.Schema.Types.ObjectId, ref: 'Shop', required: true },
@@ -36,6 +46,7 @@ const orderSchema = new mongoose.Schema(
     },
     items: [orderItemSchema],
     timeline: [timelineSchema],
+    payments: [paymentRecordSchema],
     notes: { type: String, default: '' },
     subtotal: { type: Number, required: true, default: 0 },
     discount: { type: Number, default: 0 },
@@ -49,6 +60,7 @@ const orderSchema = new mongoose.Schema(
     pendingAmount: { type: Number, default: 0 },
     balanceDue: { type: Number, default: 0 },
     paymentStatus: { type: String, enum: ['unpaid', 'partial', 'paid'], default: 'unpaid' },
+    lastPaymentDate: { type: Date, default: null },
     syncVersion: { type: Number, default: 1 },
     isDeleted: { type: Boolean, default: false },
   },

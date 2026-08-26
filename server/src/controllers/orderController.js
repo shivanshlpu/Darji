@@ -174,6 +174,19 @@ export const createOrder = async (req, res) => {
     const resolvedAddress = body.customerAddress ? body.customerAddress.trim() : (cust?.address || '');
     const resolvedMobile = body.customerMobile ? body.customerMobile.trim() : (body.customerPhone ? body.customerPhone.trim() : (cust?.mobile || ''));
 
+    const initialPayments = [];
+    const initialPaymentDate = body.orderDate ? new Date(body.orderDate) : new Date();
+    if (paidAmount > 0) {
+      initialPayments.push({
+        amount: paidAmount,
+        mode: body.paymentMode || 'cash',
+        type: pendingAmount <= 0 ? 'final' : 'advance',
+        date: initialPaymentDate,
+        notes: body.paymentNotes || (pendingAmount <= 0 ? 'Full payment on order creation' : 'Advance payment on order creation'),
+        receivedBy: req.user?.name || 'Owner',
+      });
+    }
+
     const order = await Order.create({
       shopId,
       orderNumber,
@@ -200,6 +213,8 @@ export const createOrder = async (req, res) => {
       pendingAmount,
       balanceDue: pendingAmount,
       paymentStatus,
+      payments: initialPayments,
+      lastPaymentDate: paidAmount > 0 ? initialPaymentDate : null,
       timeline: [{ status: body.status || 'pending', timestamp: new Date(), updatedBy: 'Owner' }],
     });
 
@@ -227,7 +242,24 @@ export const updateOrder = async (req, res) => {
     }
     const extraCharges = Math.round(req.body.extraCharges !== undefined ? Number(req.body.extraCharges) : (order.extraCharges || 0));
     const grandTotal = req.body.grandTotal !== undefined ? Math.round(Number(req.body.grandTotal)) : Math.max(0, Math.round(subtotal - discount + extraCharges));
-    const advancePaid = req.body.advancePaid !== undefined ? Math.round(Number(req.body.advancePaid)) : (req.body.paidAmount !== undefined ? Math.round(Number(req.body.paidAmount)) : (order.advancePaid || order.paidAmount || 0));
+    
+    // Preserve existing payments or calculate from payments array
+    let currentPayments = Array.isArray(req.body.payments) ? req.body.payments : (order.payments || []);
+    let advancePaid = req.body.advancePaid !== undefined ? Math.round(Number(req.body.advancePaid)) : (req.body.paidAmount !== undefined ? Math.round(Number(req.body.paidAmount)) : (order.advancePaid || order.paidAmount || 0));
+    
+    if (currentPayments.length > 0) {
+      advancePaid = currentPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    } else if (advancePaid > 0 && currentPayments.length === 0) {
+      currentPayments = [{
+        amount: advancePaid,
+        mode: req.body.paymentMode || 'cash',
+        type: 'advance',
+        date: order.orderDate || order.createdAt || new Date(),
+        notes: 'Initial payment record',
+        receivedBy: req.user?.name || 'Owner',
+      }];
+    }
+
     const balanceDue = Math.max(0, grandTotal - advancePaid);
     const paymentStatus = balanceDue <= 0 ? 'paid' : advancePaid > 0 ? 'partial' : 'unpaid';
 
@@ -245,6 +277,7 @@ export const updateOrder = async (req, res) => {
       balanceDue,
       pendingAmount: balanceDue,
       paymentStatus,
+      payments: currentPayments,
       syncVersion: (order.syncVersion || 0) + 1,
     });
 
@@ -308,19 +341,219 @@ export const markOrderAsPaid = async (req, res) => {
     const order = await findOrderByIdOrNumber(req.params.id);
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
-    const paidVal = order.grandTotal || order.totalAmount || Math.max(0, (order.subtotal || 0) - (order.discount || 0) + (order.extraCharges || 0));
-    order.advancePaid = paidVal;
-    order.paidAmount = paidVal;
-    order.balanceDue = 0;
-    order.pendingAmount = 0;
-    order.paymentStatus = 'paid';
+    const grandTotal = order.grandTotal || order.totalAmount || Math.max(0, (order.subtotal || 0) - (order.discount || 0) + (order.extraCharges || 0));
+    const totalPaidAlready = Array.isArray(order.payments) && order.payments.length > 0
+      ? order.payments.reduce((s, p) => s + (Number(p.amount) || 0), 0)
+      : (Number(order.paidAmount) || Number(order.advancePaid) || 0);
+
+    const remainingToPay = Math.max(0, grandTotal - totalPaidAlready);
+    const paymentDate = req.body?.paymentDate ? new Date(req.body.paymentDate) : new Date();
+    const paymentMode = req.body?.mode || req.body?.paymentMode || 'cash';
+    const notes = req.body?.notes || 'Marked as paid in full';
+
+    if (!Array.isArray(order.payments)) {
+      order.payments = [];
+    }
+
+    // If legacy order had existing paidAmount but no payments array, preserve the baseline payment
+    if (order.payments.length === 0 && totalPaidAlready > 0) {
+      order.payments.push({
+        amount: totalPaidAlready,
+        mode: 'cash',
+        type: 'advance',
+        date: order.orderDate || order.createdAt || new Date(),
+        notes: 'Initial recorded payment',
+        receivedBy: req.user?.name || 'Owner',
+      });
+    }
+
+    // Add new payment entry with TODAY'S timestamp (or specified date)
+    if (remainingToPay > 0) {
+      order.payments.push({
+        amount: remainingToPay,
+        mode: paymentMode,
+        type: 'final',
+        date: paymentDate,
+        notes,
+        receivedBy: req.user?.name || 'Owner',
+      });
+    }
+
+    const newTotalPaid = order.payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    order.paidAmount = newTotalPaid;
+    order.advancePaid = order.payments[0]?.amount || newTotalPaid;
+    order.balanceDue = Math.max(0, grandTotal - newTotalPaid);
+    order.pendingAmount = order.balanceDue;
+    order.paymentStatus = order.balanceDue <= 0 ? 'paid' : newTotalPaid > 0 ? 'partial' : 'unpaid';
+    order.lastPaymentDate = paymentDate;
     order.syncVersion = (order.syncVersion || 0) + 1;
 
     await order.save();
 
     res.json({ success: true, data: order });
   } catch (err) {
+    console.error('[Mark Paid Error]:', err);
     res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+export const addOrderPayment = async (req, res) => {
+  try {
+    const order = await findOrderByIdOrNumber(req.params.id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    const { amount, mode = 'cash', type = 'partial', date, notes = '', referenceId = '' } = req.body;
+    const paymentAmount = Number(amount);
+    if (!paymentAmount || paymentAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Valid payment amount is required' });
+    }
+
+    if (!Array.isArray(order.payments)) {
+      order.payments = [];
+    }
+
+    // Legacy migration fallback
+    if (order.payments.length === 0 && (order.paidAmount > 0 || order.advancePaid > 0)) {
+      const priorPaid = Number(order.paidAmount) || Number(order.advancePaid) || 0;
+      order.payments.push({
+        amount: priorPaid,
+        mode: 'cash',
+        type: 'advance',
+        date: order.orderDate || order.createdAt || new Date(),
+        notes: 'Initial recorded payment',
+        receivedBy: 'Owner',
+      });
+    }
+
+    const paymentDate = date ? new Date(date) : new Date();
+    order.payments.push({
+      amount: paymentAmount,
+      mode,
+      type,
+      date: paymentDate,
+      notes,
+      referenceId,
+      receivedBy: req.user?.name || 'Owner',
+    });
+
+    const grandTotal = order.grandTotal || order.totalAmount || 0;
+    const totalPaid = order.payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    order.paidAmount = totalPaid;
+    order.balanceDue = Math.max(0, grandTotal - totalPaid);
+    order.pendingAmount = order.balanceDue;
+    order.paymentStatus = order.balanceDue <= 0 ? 'paid' : totalPaid > 0 ? 'partial' : 'unpaid';
+    order.lastPaymentDate = paymentDate;
+    order.syncVersion = (order.syncVersion || 0) + 1;
+
+    await order.save();
+
+    res.status(201).json({ success: true, data: order });
+  } catch (err) {
+    console.error('[Add Order Payment Error]:', err);
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+export const updateOrderPayment = async (req, res) => {
+  try {
+    const { id, paymentId } = req.params;
+    const order = await findOrderByIdOrNumber(id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    if (!Array.isArray(order.payments)) {
+      order.payments = [];
+    }
+
+    const payment = order.payments.id(paymentId) || order.payments.find(p => String(p._id) === String(paymentId));
+    if (!payment) {
+      return res.status(404).json({ success: false, message: 'Payment record not found' });
+    }
+
+    const { amount, mode, type, date, notes, referenceId } = req.body;
+    if (amount !== undefined) payment.amount = Number(amount);
+    if (mode !== undefined) payment.mode = mode;
+    if (type !== undefined) payment.type = type;
+    if (date !== undefined) payment.date = new Date(date);
+    if (notes !== undefined) payment.notes = notes;
+    if (referenceId !== undefined) payment.referenceId = referenceId;
+
+    const grandTotal = order.grandTotal || order.totalAmount || 0;
+    const totalPaid = order.payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    order.paidAmount = totalPaid;
+    order.balanceDue = Math.max(0, grandTotal - totalPaid);
+    order.pendingAmount = order.balanceDue;
+    order.paymentStatus = order.balanceDue <= 0 ? 'paid' : totalPaid > 0 ? 'partial' : 'unpaid';
+    order.syncVersion = (order.syncVersion || 0) + 1;
+
+    await order.save();
+
+    res.json({ success: true, data: order, message: 'Payment entry updated successfully' });
+  } catch (err) {
+    console.error('[Update Order Payment Error]:', err);
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+export const deleteOrderPayment = async (req, res) => {
+  try {
+    const { id, paymentId } = req.params;
+    const order = await findOrderByIdOrNumber(id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    if (!Array.isArray(order.payments)) {
+      order.payments = [];
+    }
+
+    order.payments = order.payments.filter(p => String(p._id) !== String(paymentId));
+
+    const grandTotal = order.grandTotal || order.totalAmount || 0;
+    const totalPaid = order.payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    order.paidAmount = totalPaid;
+    order.advancePaid = order.payments[0]?.amount || 0;
+    order.balanceDue = Math.max(0, grandTotal - totalPaid);
+    order.pendingAmount = order.balanceDue;
+    order.paymentStatus = order.balanceDue <= 0 ? 'paid' : totalPaid > 0 ? 'partial' : 'unpaid';
+    order.syncVersion = (order.syncVersion || 0) + 1;
+
+    await order.save();
+
+    res.json({ success: true, data: order, message: 'Payment entry removed' });
+  } catch (err) {
+    console.error('[Delete Order Payment Error]:', err);
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+export const migrateExistingOrderPayments = async (req, res) => {
+  try {
+    const query = { isDeleted: false };
+    if (req.shopId) query.shopId = req.shopId;
+
+    const orders = await Order.find(query);
+    let migratedCount = 0;
+
+    for (const order of orders) {
+      if ((!order.payments || order.payments.length === 0) && (order.paidAmount > 0 || order.advancePaid > 0)) {
+        const amt = Number(order.paidAmount) || Number(order.advancePaid) || 0;
+        const pDate = order.orderDate || order.createdAt || new Date();
+        order.payments = [{
+          amount: amt,
+          mode: 'cash',
+          type: order.paymentStatus === 'paid' ? 'final' : 'advance',
+          date: pDate,
+          notes: 'Legacy entry preserved',
+          receivedBy: 'Owner',
+        }];
+        order.lastPaymentDate = pDate;
+        await order.save();
+        migratedCount++;
+      }
+    }
+
+    res.json({ success: true, message: `Successfully verified and normalized ${migratedCount} order payment records.` });
+  } catch (err) {
+    console.error('[Payment Migration Error]:', err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 

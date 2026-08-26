@@ -116,13 +116,40 @@ export default function Reports() {
     };
   }, [orders, expenses, period, startDate, endDate]);
 
-  // Calculate Net Profit & Financials for filtered dataset
+  // Calculate Net Profit & Financials for filtered dataset (Collections based on payment dates)
   const stats = useMemo(() => {
-    const totalSales = filteredOrders.reduce((s, o) => s + (o.paidAmount || 0), 0);
+    let totalSales = 0;
+    let cashCollections = 0;
+    let onlineCollections = 0;
+
+    (orders || []).forEach(o => {
+      if (Array.isArray(o.payments) && o.payments.length > 0) {
+        o.payments.forEach(p => {
+          const pDate = p.date ? new Date(p.date) : null;
+          if (pDate && pDate >= effectiveDateRange.from && pDate <= effectiveDateRange.to) {
+            const amt = Number(p.amount) || 0;
+            totalSales += amt;
+            if (p.mode === 'cash') {
+              cashCollections += amt;
+            } else {
+              onlineCollections += amt;
+            }
+          }
+        });
+      } else {
+        const d = new Date(o.orderDate || o.createdAt);
+        if (!isNaN(d.getTime()) && d >= effectiveDateRange.from && d <= effectiveDateRange.to) {
+          const amt = Number(o.paidAmount) || Number(o.advancePaid) || 0;
+          totalSales += amt;
+          cashCollections += amt;
+        }
+      }
+    });
+
     const totalBilled = filteredOrders.reduce((s, o) => s + (o.subtotal || 0), 0);
     const totalDiscounts = filteredOrders.reduce((s, o) => s + (o.discount || 0), 0);
     const discountCount = filteredOrders.filter(o => (o.discount || 0) > 0).length;
-    const totalPending = filteredOrders.reduce((s, o) => s + (o.pendingAmount || 0), 0);
+    const totalPending = filteredOrders.reduce((s, o) => s + (Number(o.pendingAmount) || Number(o.balanceDue) || 0), 0);
     const totalExtraIncome = filteredExpenses.filter(e => e.type === 'income').reduce((s, e) => s + (e.amount || 0), 0);
     const totalExp = filteredExpenses.filter(e => e.type !== 'income').reduce((s, e) => s + (e.amount || 0), 0);
 
@@ -132,6 +159,8 @@ export default function Reports() {
 
     return {
       totalSales,
+      cashCollections,
+      onlineCollections,
       totalBilled,
       totalDiscounts,
       discountCount,
@@ -142,7 +171,7 @@ export default function Reports() {
       netProfit,
       marginPct,
     };
-  }, [filteredOrders, filteredExpenses]);
+  }, [orders, filteredOrders, filteredExpenses, effectiveDateRange]);
 
   const discountOrders = useMemo(() => {
     return filteredOrders.filter(o => (o.discount || 0) > 0);

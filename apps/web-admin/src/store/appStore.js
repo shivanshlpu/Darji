@@ -274,18 +274,54 @@ const useAppStore = create((set, get) => ({
     }
   },
 
-  markOrderPaid: (orderId) => {
+  markOrderPaid: async (orderId, paymentData = {}) => {
+    const paymentDate = paymentData.paymentDate || new Date().toISOString();
+    const paymentMode = paymentData.mode || paymentData.paymentMode || 'cash';
+    const notes = paymentData.notes || 'Marked as paid in full';
+
     set((state) => {
       const updatedOrders = state.orders.map((o) => {
-        if (o._id === orderId) {
-          const fullAmount = o.totalAmount || o.subtotal || (o.paidAmount || 0) + (o.pendingAmount || 0);
+        if (o._id === orderId || o.orderNumber === orderId) {
+          const grandTotal = o.grandTotal || o.totalAmount || o.subtotal || ((o.paidAmount || 0) + (o.pendingAmount || 0));
+          const existingPayments = Array.isArray(o.payments) ? [...o.payments] : [];
+          const totalPaidAlready = existingPayments.length > 0
+            ? existingPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0)
+            : (Number(o.paidAmount) || Number(o.advancePaid) || 0);
+
+          if (existingPayments.length === 0 && totalPaidAlready > 0) {
+            existingPayments.push({
+              _id: 'pay_legacy_' + Math.random().toString(36).substr(2, 6),
+              amount: totalPaidAlready,
+              mode: 'cash',
+              type: 'advance',
+              date: o.orderDate || o.createdAt || paymentDate,
+              notes: 'Initial recorded payment',
+            });
+          }
+
+          const remainingToPay = Math.max(0, grandTotal - totalPaidAlready);
+          if (remainingToPay > 0) {
+            existingPayments.push({
+              _id: 'pay_' + Math.random().toString(36).substr(2, 9),
+              amount: remainingToPay,
+              mode: paymentMode,
+              type: 'final',
+              date: paymentDate,
+              notes,
+            });
+          }
+
+          const newTotalPaid = existingPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+
           return {
             ...o,
-            advancePaid: fullAmount,
-            paidAmount: fullAmount,
+            payments: existingPayments,
+            advancePaid: existingPayments[0]?.amount || newTotalPaid,
+            paidAmount: newTotalPaid,
             balanceDue: 0,
             pendingAmount: 0,
             paymentStatus: 'paid',
+            lastPaymentDate: paymentDate,
           };
         }
         return o;
@@ -296,6 +332,78 @@ const useAppStore = create((set, get) => ({
         dashboardData: generateDashboardData(updatedOrders, state.expenses),
       };
     });
+
+    try {
+      const res = await api.markOrderAsPaid(orderId, { paymentDate, mode: paymentMode, notes });
+      if (res && res.success && res.data) {
+        set((state) => {
+          const syncedOrders = state.orders.map(o => (o._id === res.data._id || o.orderNumber === res.data.orderNumber) ? res.data : o);
+          return {
+            orders: syncedOrders,
+            dashboardData: generateDashboardData(syncedOrders, state.expenses),
+          };
+        });
+      }
+    } catch (err) {
+      console.warn('[markOrderPaid DB Sync Warning]:', err.message);
+    }
+  },
+
+  addOrderPayment: async (orderId, paymentData) => {
+    try {
+      const res = await api.addPayment(orderId, paymentData);
+      if (res && res.success && res.data) {
+        set((state) => {
+          const updatedOrders = state.orders.map(o => (o._id === res.data._id || o.orderNumber === res.data.orderNumber) ? res.data : o);
+          return {
+            orders: updatedOrders,
+            dashboardData: generateDashboardData(updatedOrders, state.expenses),
+          };
+        });
+        return res.data;
+      }
+    } catch (err) {
+      console.error('[addOrderPayment Error]:', err.message);
+      throw err;
+    }
+  },
+
+  updateOrderPayment: async (orderId, paymentId, paymentData) => {
+    try {
+      const res = await api.updatePayment(orderId, paymentId, paymentData);
+      if (res && res.success && res.data) {
+        set((state) => {
+          const updatedOrders = state.orders.map(o => (o._id === res.data._id || o.orderNumber === res.data.orderNumber) ? res.data : o);
+          return {
+            orders: updatedOrders,
+            dashboardData: generateDashboardData(updatedOrders, state.expenses),
+          };
+        });
+        return res.data;
+      }
+    } catch (err) {
+      console.error('[updateOrderPayment Error]:', err.message);
+      throw err;
+    }
+  },
+
+  deleteOrderPayment: async (orderId, paymentId) => {
+    try {
+      const res = await api.deletePayment(orderId, paymentId);
+      if (res && res.success && res.data) {
+        set((state) => {
+          const updatedOrders = state.orders.map(o => (o._id === res.data._id || o.orderNumber === res.data.orderNumber) ? res.data : o);
+          return {
+            orders: updatedOrders,
+            dashboardData: generateDashboardData(updatedOrders, state.expenses),
+          };
+        });
+        return res.data;
+      }
+    } catch (err) {
+      console.error('[deleteOrderPayment Error]:', err.message);
+      throw err;
+    }
   },
 
   deleteOrder: async (orderId) => {

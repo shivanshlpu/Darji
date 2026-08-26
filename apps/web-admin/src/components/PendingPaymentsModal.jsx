@@ -203,8 +203,13 @@ export default function PendingPaymentsModal({ isOpen, onClose }) {
                               type="button"
                               style={{ background: '#16a34a', color: '#fff', padding: '2px 8px', fontSize: '11px', borderRadius: '4px', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: '6px' }}
                               onClick={() => {
-                                markOrderPaid(ord._id);
-                                apiClient.markOrderAsPaid(ord._id).catch(() => {});
+                                markOrderPaid(ord._id, {
+                                  paymentDate: new Date().toISOString(),
+                                  mode: 'cash',
+                                  notes: 'Paid from Pending Payments modal',
+                                });
+                                setToastMsg(`✅ Order #${ord.orderNumber} marked as Paid with today's date!`);
+                                setTimeout(() => setToastMsg(null), 3000);
                               }}
                             >
                               <CheckCircle size={11} /> Mark Paid

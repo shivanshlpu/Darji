@@ -46,10 +46,32 @@ export const processQueryAI = async (req, res) => {
       email: shopConfig.email || 'darji.tailoring@gmail.com',
     };
 
+function getPaymentsInDateRange(orders, fromDateStr, toDateStr) {
+  let total = 0;
+  for (const o of orders) {
+    if (Array.isArray(o.payments) && o.payments.length > 0) {
+      for (const p of o.payments) {
+        const pDate = p.date ? new Date(p.date).toISOString().slice(0, 10) : '';
+        if (pDate >= fromDateStr && pDate <= toDateStr) {
+          total += Number(p.amount) || 0;
+        }
+      }
+    } else {
+      const legacyDate = o.orderDate ? new Date(o.orderDate) : (o.createdAt ? new Date(o.createdAt) : null);
+      if (legacyDate) {
+        const lDateStr = legacyDate.toISOString().slice(0, 10);
+        if (lDateStr >= fromDateStr && lDateStr <= toDateStr) {
+          total += Number(o.paidAmount) || Number(o.advancePaid) || 0;
+        }
+      }
+    }
+  }
+  return total;
+}
+
     // 1. TODAY'S NET PROFIT / FAAYDA
     if (raw.includes('aaj') && (raw.includes('profit') || raw.includes('faayda') || raw.includes('net profit') || raw.includes('bachat') || raw.includes('nafa'))) {
-      const todayOrders = orders.filter(o => o.createdAt && o.createdAt.toISOString().slice(0, 10) === todayStr);
-      const todaySales = todayOrders.reduce((sum, o) => sum + (o.paidAmount || 0), 0);
+      const todaySales = getPaymentsInDateRange(orders, todayStr, todayStr);
       
       const todayExpensesList = expenses.filter(e => e.date === todayStr);
       const todayExpensesTotal = todayExpensesList.reduce((sum, e) => sum + (e.amount || 0), 0);
@@ -102,8 +124,7 @@ export const processQueryAI = async (req, res) => {
 
     // 3. YESTERDAY'S PERFORMANCE (KAL KA SALES / PROFIT)
     if (raw.includes('kal') && (raw.includes('sale') || raw.includes('profit') || raw.includes('business') || raw.includes('kamai'))) {
-      const yestOrders = orders.filter(o => o.createdAt && o.createdAt.toISOString().slice(0, 10) === yesterdayStr);
-      const yestSales = yestOrders.reduce((sum, o) => sum + (o.paidAmount || 0), 0);
+      const yestSales = getPaymentsInDateRange(orders, yesterdayStr, yesterdayStr);
       
       const yestExpenses = expenses.filter(e => e.date === yesterdayStr).reduce((sum, e) => sum + (e.amount || 0), 0);
       const yestProfit = yestSales - yestExpenses;
@@ -127,8 +148,8 @@ export const processQueryAI = async (req, res) => {
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       const sevenDaysStr = sevenDaysAgo.toISOString().slice(0, 10);
 
+      const weekSales = getPaymentsInDateRange(orders, sevenDaysStr, todayStr);
       const weekOrders = orders.filter(o => o.createdAt && o.createdAt.toISOString().slice(0, 10) >= sevenDaysStr);
-      const weekSales = weekOrders.reduce((sum, o) => sum + (o.paidAmount || 0), 0);
 
       const weekExpenses = expenses.filter(e => e.date && e.date >= sevenDaysStr).reduce((sum, e) => sum + (e.amount || 0), 0);
       const weekNetProfit = weekSales - weekExpenses;
@@ -285,16 +306,16 @@ export const processQueryAI = async (req, res) => {
 
     // 8. TODAY SALES
     if (raw.includes('aaj') && (raw.includes('sale') || raw.includes('business') || raw.includes('kamai') || raw.includes('total'))) {
+      const todaySales = getPaymentsInDateRange(orders, todayStr, todayStr);
       const todayOrders = orders.filter(o => o.createdAt && o.createdAt.toISOString().slice(0, 10) === todayStr);
-      const totalSales = todayOrders.reduce((sum, o) => sum + (o.paidAmount || 0), 0);
       const orderCount = todayOrders.length;
 
       return res.json({
         success: true,
         type: 'sales',
-        message: `Aaj ka total sales ${formatINR(totalSales)} hai (${orderCount} orders received).`,
+        message: `Aaj ka total collection ${formatINR(todaySales)} hai (${orderCount} new orders received).`,
         details: [
-          { label: "Today's Collection", value: formatINR(totalSales) },
+          { label: "Today's Collection", value: formatINR(todaySales) },
           { label: 'Orders Placed Today', value: orderCount },
         ],
         suggestions: ['Aaj ka net profit dikhao', 'Pending payments check karo', 'Is mahine ka profit'],

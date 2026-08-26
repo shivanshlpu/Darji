@@ -53,12 +53,14 @@ export const api = {
   },
   createOrder: (data) => request('/orders', { method: 'POST', body: JSON.stringify(data) }),
   updateOrder: (id, data) => request(`/orders/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  deleteOrder: (id) => request(`/orders/${id}`, { method: 'DELETE' }),
-  markOrderAsPaid: (id) => request(`/orders/${id}/mark-paid`, { method: 'POST' }),
+  markOrderAsPaid: (id, data = {}) => request(`/orders/${id}/mark-paid`, { method: 'POST', body: JSON.stringify(data) }),
   updateOrderStatus: (id, newStatus) => request(`/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ newStatus }) }),
+  migrateOrderPayments: () => request('/orders/migrate-payments', { method: 'POST' }),
 
   // Payments
   addPayment: (orderId, data) => request(`/orders/${orderId}/payments`, { method: 'POST', body: JSON.stringify(data) }),
+  updatePayment: (orderId, paymentId, data) => request(`/orders/${orderId}/payments/${paymentId}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deletePayment: (orderId, paymentId) => request(`/orders/${orderId}/payments/${paymentId}`, { method: 'DELETE' }),
 
   // Invoices
   createInvoice: (orderId, data) => request(`/orders/${orderId}/invoice`, { method: 'POST', body: JSON.stringify(data) }),

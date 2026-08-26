@@ -19,17 +19,31 @@ export function generateExpenses() {
 export function generateDashboardData(orders = [], expenses = []) {
   const today = new Date().toISOString().slice(0, 10);
 
-  const todaySales = orders
-    .filter(o => o.createdAt && o.createdAt.slice(0, 10) === today)
-    .reduce((s, o) => s + (o.paidAmount || o.advancePaid || 0), 0);
+  let todaySales = 0;
+  for (const o of orders) {
+    if (Array.isArray(o.payments) && o.payments.length > 0) {
+      for (const p of o.payments) {
+        const pDate = p.date ? new Date(p.date).toISOString().slice(0, 10) : '';
+        if (pDate === today) {
+          todaySales += (Number(p.amount) || 0);
+        }
+      }
+    } else {
+      const legacyDate = o.orderDate ? (typeof o.orderDate === 'string' ? o.orderDate.slice(0, 10) : new Date(o.orderDate).toISOString().slice(0, 10)) : (o.createdAt ? (typeof o.createdAt === 'string' ? o.createdAt.slice(0, 10) : new Date(o.createdAt).toISOString().slice(0, 10)) : '');
+      if (legacyDate === today) {
+        todaySales += (Number(o.paidAmount) || Number(o.advancePaid) || 0);
+      }
+    }
+  }
 
   const totalPending = orders
     .filter(o => !['completed', 'delivered', 'cancelled'].includes(o.status))
-    .reduce((s, o) => s + (o.pendingAmount || o.balanceDue || 0), 0);
+    .reduce((s, o) => s + (Number(o.pendingAmount) || Number(o.balanceDue) || 0), 0);
 
   const dueToday = orders.filter(o => {
     if (!o.deliveryDate || ['completed', 'delivered', 'cancelled'].includes(o.status)) return false;
-    return o.deliveryDate.slice(0, 10) <= today;
+    const delStr = typeof o.deliveryDate === 'string' ? o.deliveryDate.slice(0, 10) : new Date(o.deliveryDate).toISOString().slice(0, 10);
+    return delStr <= today;
   });
 
   const todayExpenses = expenses

@@ -37,16 +37,35 @@ export default function Cashbook() {
     loadCashbook();
   }, [selectedDate]);
 
-  // Auto-calculated values for selected date (Section 7.5 Formula)
-  const cashSales = useMemo(() => {
-    return (orders || [])
-      .filter(o => o.createdAt && o.createdAt.slice(0, 10) === selectedDate)
-      .reduce((s, o) => s + (o.paidAmount || 0), 0);
-  }, [orders, selectedDate]);
+  // Auto-calculated values for selected date (Section 7.5 Formula based on payment ledger)
+  const { cashSales, onlineSales } = useMemo(() => {
+    let cash = 0;
+    let online = 0;
 
-  const onlineSales = useMemo(() => {
-    return Math.round(cashSales * 0.45); // Simulated online portion
-  }, [cashSales]);
+    (orders || []).forEach(o => {
+      if (Array.isArray(o.payments) && o.payments.length > 0) {
+        o.payments.forEach(p => {
+          const pDate = p.date ? (typeof p.date === 'string' ? p.date.slice(0, 10) : new Date(p.date).toISOString().slice(0, 10)) : '';
+          if (pDate === selectedDate) {
+            const amt = Number(p.amount) || 0;
+            if (p.mode === 'cash') {
+              cash += amt;
+            } else {
+              online += amt;
+            }
+          }
+        });
+      } else {
+        const legacyDate = o.orderDate ? (typeof o.orderDate === 'string' ? o.orderDate.slice(0, 10) : new Date(o.orderDate).toISOString().slice(0, 10)) : (o.createdAt ? (typeof o.createdAt === 'string' ? o.createdAt.slice(0, 10) : new Date(o.createdAt).toISOString().slice(0, 10)) : '');
+        if (legacyDate === selectedDate) {
+          const amt = Number(o.paidAmount) || Number(o.advancePaid) || 0;
+          cash += amt;
+        }
+      }
+    });
+
+    return { cashSales: cash, onlineSales: online };
+  }, [orders, selectedDate]);
 
   const totalExpensesCash = useMemo(() => {
     return (expenses || [])

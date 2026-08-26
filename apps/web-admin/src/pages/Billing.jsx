@@ -646,8 +646,13 @@ export default function Billing() {
                       className="billing__action-btn billing__action-btn--paid"
                       onClick={() => {
                         if (activeInvoice.orderId) {
-                          markOrderPaid(activeInvoice.orderId);
-                          apiClient.markOrderAsPaid(activeInvoice.orderId).catch(() => {});
+                          markOrderPaid(activeInvoice.orderId, {
+                            paymentDate: new Date().toISOString(),
+                            mode: 'cash',
+                            notes: 'Marked paid from invoice preview',
+                          });
+                          setPdfMsg({ success: true, text: '✅ Invoice marked as PAID with today\'s date!' });
+                          setTimeout(() => setPdfMsg(null), 3000);
                         }
                       }}
                     >

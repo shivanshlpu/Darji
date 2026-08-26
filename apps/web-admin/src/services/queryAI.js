@@ -28,10 +28,29 @@ export function processLocalQuery(text, { orders = [], expenses = [], customers 
   yesterdayDate.setDate(yesterdayDate.getDate() - 1);
   const yesterdayStr = yesterdayDate.toISOString().slice(0, 10);
 
+  function getPaymentsInDateRange(orderList, fromDateStr, toDateStr) {
+    let total = 0;
+    for (const o of orderList) {
+      if (Array.isArray(o.payments) && o.payments.length > 0) {
+        for (const p of o.payments) {
+          const pDate = p.date ? (typeof p.date === 'string' ? p.date.slice(0, 10) : new Date(p.date).toISOString().slice(0, 10)) : '';
+          if (pDate >= fromDateStr && pDate <= toDateStr) {
+            total += Number(p.amount) || 0;
+          }
+        }
+      } else {
+        const legacyDate = o.orderDate ? (typeof o.orderDate === 'string' ? o.orderDate.slice(0, 10) : new Date(o.orderDate).toISOString().slice(0, 10)) : (o.createdAt ? (typeof o.createdAt === 'string' ? o.createdAt.slice(0, 10) : new Date(o.createdAt).toISOString().slice(0, 10)) : '');
+        if (legacyDate >= fromDateStr && legacyDate <= toDateStr) {
+          total += Number(o.paidAmount) || Number(o.advancePaid) || 0;
+        }
+      }
+    }
+    return total;
+  }
+
   // 1. TODAY'S NET PROFIT / FAAYDA
   if (raw.includes('aaj') && (raw.includes('profit') || raw.includes('faayda') || raw.includes('net profit') || raw.includes('bachat') || raw.includes('nafa'))) {
-    const todayOrders = orders.filter(o => o.createdAt && o.createdAt.slice(0, 10) === todayStr);
-    const todaySales = todayOrders.reduce((sum, o) => sum + (o.paidAmount || 0), 0);
+    const todaySales = getPaymentsInDateRange(orders, todayStr, todayStr);
     
     const todayExpensesList = expenses.filter(e => e.date === todayStr);
     const todayExpensesTotal = todayExpensesList.reduce((sum, e) => sum + (e.amount || 0), 0);
@@ -81,8 +100,7 @@ export function processLocalQuery(text, { orders = [], expenses = [], customers 
 
   // 3. YESTERDAY'S PERFORMANCE (KAL KA SALES / PROFIT)
   if (raw.includes('kal') && (raw.includes('sale') || raw.includes('profit') || raw.includes('business') || raw.includes('kamai'))) {
-    const yestOrders = orders.filter(o => o.createdAt && o.createdAt.slice(0, 10) === yesterdayStr);
-    const yestSales = yestOrders.reduce((sum, o) => sum + (o.paidAmount || 0), 0);
+    const yestSales = getPaymentsInDateRange(orders, yesterdayStr, yesterdayStr);
     
     const yestExpenses = expenses.filter(e => e.date === yesterdayStr).reduce((sum, e) => sum + (e.amount || 0), 0);
     const yestProfit = yestSales - yestExpenses;
@@ -105,8 +123,8 @@ export function processLocalQuery(text, { orders = [], expenses = [], customers 
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const sevenDaysStr = sevenDaysAgo.toISOString().slice(0, 10);
 
+    const weekSales = getPaymentsInDateRange(orders, sevenDaysStr, todayStr);
     const weekOrders = orders.filter(o => o.createdAt && o.createdAt.slice(0, 10) >= sevenDaysStr);
-    const weekSales = weekOrders.reduce((sum, o) => sum + (o.paidAmount || 0), 0);
 
     const weekExpenses = expenses.filter(e => e.date && e.date >= sevenDaysStr).reduce((sum, e) => sum + (e.amount || 0), 0);
     const weekNetProfit = weekSales - weekExpenses;
@@ -255,15 +273,15 @@ export function processLocalQuery(text, { orders = [], expenses = [], customers 
 
   // 8. TODAY SALES
   if (raw.includes('aaj') && (raw.includes('sale') || raw.includes('business') || raw.includes('kamai') || raw.includes('total'))) {
+    const todaySales = getPaymentsInDateRange(orders, todayStr, todayStr);
     const todayOrders = orders.filter(o => o.createdAt && o.createdAt.slice(0, 10) === todayStr);
-    const totalSales = todayOrders.reduce((sum, o) => sum + (o.paidAmount || 0), 0);
     const orderCount = todayOrders.length;
 
     return {
       type: 'sales',
-      message: `Aaj ka total sales ${formatINR(totalSales)} hai (${orderCount} orders received).`,
+      message: `Aaj ka total collection ${formatINR(todaySales)} hai (${orderCount} new orders received).`,
       details: [
-        { label: "Today's Collection", value: formatINR(totalSales) },
+        { label: "Today's Collection", value: formatINR(todaySales) },
         { label: 'Orders Placed Today', value: orderCount },
       ],
       suggestions: ['Aaj ka net profit dikhao', 'Pending payments check karo', 'Is mahine ka profit'],

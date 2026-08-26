@@ -10,6 +10,7 @@ import useMeasurementStore from '../store/measurementStore';
 import { compressImage } from '../utils/imageCompressor';
 import { generateMeasurements } from '../data/mockData';
 import { MEASUREMENT_CATEGORIES, ORDER_STATUSES, PAYMENT_STATUSES, getCategoryConfig } from '../constants';
+import PaymentHistoryModal from '../components/PaymentHistoryModal';
 import './CustomerProfile.css';
 
 const formatINR = (a) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(a);
@@ -18,7 +19,7 @@ export default function CustomerProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { customers, selectCustomer, selectedCustomer, updateCustomer, fetchCustomersFromDB } = useCustomerStore();
-  const { getOrdersByCustomer, fetchOrdersFromDB } = useAppStore();
+  const { getOrdersByCustomer, fetchOrdersFromDB, orders: allOrders } = useAppStore();
   const { measurements, addMeasurement, getLatestByCategory, getHistory, fetchMeasurementsFromDB } = useMeasurementStore();
 
   useEffect(() => {
@@ -30,6 +31,7 @@ export default function CustomerProfile() {
   }, [id]);
   const [activeTab, setActiveTab] = useState('measurements');
   const [showMeasurementModal, setShowMeasurementModal] = useState(false);
+  const [paymentHistoryOrder, setPaymentHistoryOrder] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('topWear');
   const [measurementFields, setMeasurementFields] = useState({});
   const [customKeyName, setCustomKeyName] = useState('');
@@ -314,15 +316,48 @@ export default function CustomerProfile() {
             <div className="profile__payment-summary">
               <div className="profile__payment-card">
                 <span className="profile__payment-label">Total Billed</span>
-                <span className="profile__payment-value">{formatINR(orders.reduce((s, o) => s + o.subtotal, 0))}</span>
+                <span className="profile__payment-value">{formatINR(orders.reduce((s, o) => s + (o.grandTotal || o.totalAmount || o.subtotal || 0), 0))}</span>
               </div>
               <div className="profile__payment-card">
-                <span className="profile__payment-label">Total Paid</span>
-                <span className="profile__payment-value profile__payment-value--success">{formatINR(orders.reduce((s, o) => s + o.paidAmount, 0))}</span>
+                <span className="profile__payment-label">Total Collected</span>
+                <span className="profile__payment-value profile__payment-value--success">{formatINR(orders.reduce((s, o) => s + (o.paidAmount || o.advancePaid || 0), 0))}</span>
               </div>
               <div className="profile__payment-card">
-                <span className="profile__payment-label">Pending</span>
-                <span className="profile__payment-value profile__payment-value--danger">{formatINR(orders.reduce((s, o) => s + o.pendingAmount, 0))}</span>
+                <span className="profile__payment-label">Pending Balance</span>
+                <span className="profile__payment-value profile__payment-value--danger">{formatINR(orders.reduce((s, o) => s + (Number(o.pendingAmount) || Number(o.balanceDue) || 0), 0))}</span>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '1.5rem' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>
+                Order Payments & Adjust Dates
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {orders.map(order => (
+                  <div key={order._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1rem', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                          {order.tokenNumber ? `Token #${order.tokenNumber}` : order.orderNumber}
+                        </span>
+                        <span className={`profile__order-payment profile__order-payment--${PAYMENT_STATUSES[order.paymentStatus]?.color}`}>
+                          {PAYMENT_STATUSES[order.paymentStatus]?.label}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                        Total: {formatINR(order.grandTotal || order.totalAmount || order.subtotal)} &bull; Paid: {formatINR(order.paidAmount || order.advancePaid || 0)} &bull; Due: {formatINR(order.pendingAmount || order.balanceDue || 0)}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(217, 119, 6, 0.1)', color: '#d97706', border: '1px solid rgba(217, 119, 6, 0.3)', padding: '0.45rem 0.85rem', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                      onClick={() => setPaymentHistoryOrder(order)}
+                    >
+                      <CreditCard size={14} /> Adjust Payment & Dates
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -464,6 +499,13 @@ export default function CustomerProfile() {
           </div>
         </div>
       )}
+
+      {/* Payment History & Date Adjustment Modal */}
+      <PaymentHistoryModal
+        isOpen={!!paymentHistoryOrder}
+        onClose={() => setPaymentHistoryOrder(null)}
+        order={paymentHistoryOrder ? (allOrders.find(o => o._id === paymentHistoryOrder._id || o.orderNumber === paymentHistoryOrder.orderNumber) || paymentHistoryOrder) : null}
+      />
     </div>
   );
 }
