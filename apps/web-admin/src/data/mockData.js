@@ -37,7 +37,7 @@ export function generateDashboardData(orders = [], expenses = []) {
   }
 
   const totalPending = orders
-    .filter(o => !['completed', 'delivered', 'cancelled'].includes(o.status))
+    .filter(o => o && o.status !== 'cancelled')
     .reduce((s, o) => s + (Number(o.pendingAmount) || Number(o.balanceDue) || 0), 0);
 
   const dueToday = orders.filter(o => {

@@ -31,6 +31,7 @@ const STREAMLINED_STEPS = ['pending', 'preparing', 'ready', 'completed'];
 
 const matchesStatusGroup = (orderStatus, filter) => {
   if (filter === 'all') return true;
+  if (filter === 'pendingPayment') return true;
   if (filter === 'pending') return orderStatus === 'pending';
   if (filter === 'preparing') return ['preparing', 'cutting', 'stitching', 'trial'].includes(orderStatus);
   if (filter === 'ready') return orderStatus === 'ready';
@@ -368,9 +369,17 @@ export default function Orders() {
         (o.customerName && typeof o.customerName === 'string' && o.customerName.toLowerCase().includes(q))
       );
     }
-    if (statusFilter === 'all') {
-      // By default, exclude completed/delivered orders from the main view
-      result = result.filter(o => o.status !== 'completed' && o.status !== 'delivered');
+    if (statusFilter === 'pendingPayment') {
+      result = result.filter(o => o && o.status !== 'cancelled' && (
+        (Number(o.pendingAmount) || Number(o.balanceDue) || 0) > 0 ||
+        o.paymentStatus === 'unpaid' ||
+        o.paymentStatus === 'partial'
+      ));
+    } else if (statusFilter === 'all') {
+      // By default, exclude completed/delivered orders from main view ONLY if not searching or filtering by payment
+      if (!search && paymentFilter === 'all') {
+        result = result.filter(o => o.status !== 'completed' && o.status !== 'delivered');
+      }
     } else if (statusFilter === 'dueToday') {
       const todayStr = new Date().toISOString().slice(0, 10);
       result = result.filter(o => {
@@ -409,6 +418,14 @@ export default function Orders() {
 
     return result;
   }, [orders, search, statusFilter, paymentFilter, sortBy]);
+
+  const pendingPaymentOrdersCount = useMemo(() => {
+    return (orders || []).filter(o => o && o.status !== 'cancelled' && (
+      (Number(o.pendingAmount) || Number(o.balanceDue) || 0) > 0 ||
+      o.paymentStatus === 'unpaid' ||
+      o.paymentStatus === 'partial'
+    )).length;
+  }, [orders]);
 
   const statusCounts = useMemo(() => {
     let activeCount = 0;
@@ -976,6 +993,12 @@ export default function Orders() {
           onClick={() => setStatusFilter('completed')}
         >
           {t('completedChip', 'Completed')} <span className="orders__chip-count">{(statusCounts.completed || 0) + (statusCounts.delivered || 0)}</span>
+        </button>
+        <button
+          className={`orders__status-chip orders__status-chip--warning ${statusFilter === 'pendingPayment' ? 'orders__status-chip--active' : ''}`}
+          onClick={() => setStatusFilter('pendingPayment')}
+        >
+          {language === 'hi' ? 'बकाया भुगतान' : 'Pending Payment'} <span className="orders__chip-count">{pendingPaymentOrdersCount}</span>
         </button>
       </div>
 

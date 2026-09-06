@@ -65,23 +65,32 @@ export default function Dashboard() {
   const activeOrdersCount = useMemo(() => {
     return (orders || []).filter(o => o && !['completed', 'delivered', 'cancelled'].includes(o.status)).length;
   }, [orders]);
-  // Live total pending payments calculated strictly from active orders
+  // Live total pending payments across all non-cancelled orders until marked paid
   const liveTotalPending = useMemo(() => {
     return (orders || []).reduce((sum, o) => {
-      if (['completed', 'delivered', 'cancelled'].includes(o.status)) return sum;
-      return sum + (o.pendingAmount || 0);
+      if (!o || o.status === 'cancelled') return sum;
+      const pAmt = Number(o.pendingAmount !== undefined ? o.pendingAmount : (o.balanceDue !== undefined ? o.balanceDue : 0));
+      return sum + pAmt;
     }, 0);
   }, [orders]);
 
-  // Unique pending customers count calculated strictly from active orders
+  // Unique pending customers count across all non-cancelled orders
   const pendingCustomersCount = useMemo(() => {
     const custKeys = new Set();
     (orders || []).forEach(o => {
-      if (!['completed', 'delivered', 'cancelled'].includes(o.status) && (o.pendingAmount || 0) > 0) {
-        const cId = typeof o.customerId === 'object' && o.customerId !== null
-          ? String(o.customerId._id || o.customerId.id || o.customerId.name || '')
-          : String(o.customerId || o.customerMobile || o.customerName || o._id);
-        if (cId) custKeys.add(cId);
+      if (!o || o.status === 'cancelled') return;
+      const pAmt = Number(o.pendingAmount !== undefined ? o.pendingAmount : (o.balanceDue !== undefined ? o.balanceDue : 0));
+      if (pAmt > 0) {
+        const custIdStr = typeof o.customerId === 'object' && o.customerId !== null
+          ? String(o.customerId._id || o.customerId.id || '')
+          : String(o.customerId || '');
+        const custNameStr = String(
+          (typeof o.customerId === 'object' && o.customerId !== null && o.customerId.name) ||
+          o.customerName ||
+          ''
+        ).trim().toLowerCase();
+        const cKey = custIdStr || custNameStr || String(o._id);
+        if (cKey) custKeys.add(cKey);
       }
     });
     return custKeys.size;

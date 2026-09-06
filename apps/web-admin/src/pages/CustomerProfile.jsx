@@ -51,7 +51,30 @@ export default function CustomerProfile() {
   const [expandedHistory, setExpandedHistory] = useState(null);
 
   const customer = useMemo(() => customers.find(c => c._id === id), [id, customers]);
-  const orders = useMemo(() => getOrdersByCustomer(id), [id]);
+  const orders = useMemo(() => {
+    if (!allOrders || allOrders.length === 0) return getOrdersByCustomer(id);
+    const targetName = customer?.name ? customer.name.trim().toLowerCase() : '';
+    return allOrders.filter(o => {
+      const cIdStr = typeof o.customerId === 'object' && o.customerId !== null
+        ? String(o.customerId._id || o.customerId.id || '')
+        : String(o.customerId || '');
+      const oName = o.customerName ? o.customerName.trim().toLowerCase() : '';
+      return (cIdStr && cIdStr === String(id)) || (targetName && oName && targetName === oName);
+    });
+  }, [id, allOrders, customer, getOrdersByCustomer]);
+
+  const customerPendingAmount = useMemo(() => {
+    return orders
+      .filter(o => o && o.status !== 'cancelled')
+      .reduce((s, o) => s + (Number(o.pendingAmount !== undefined ? o.pendingAmount : (o.balanceDue !== undefined ? o.balanceDue : 0)) || 0), 0);
+  }, [orders]);
+
+  const customerTotalSpending = useMemo(() => {
+    const liveSpending = orders
+      .filter(o => o && o.status !== 'cancelled')
+      .reduce((s, o) => s + (Number(o.grandTotal || o.totalAmount || o.subtotal || 0) || 0), 0);
+    return liveSpending;
+  }, [orders]);
 
   useEffect(() => {
     if (id) {
@@ -129,12 +152,12 @@ export default function CustomerProfile() {
         <div className="profile__stats">
           <div className="profile__stat">
             <span className="profile__stat-label">Total Spent</span>
-            <span className="profile__stat-value profile__stat-value--success">{formatINR(customer.totalSpending)}</span>
+            <span className="profile__stat-value profile__stat-value--success">{formatINR(customerTotalSpending)}</span>
           </div>
           <div className="profile__stat">
             <span className="profile__stat-label">Pending</span>
-            <span className={`profile__stat-value ${customer.pendingAmount > 0 ? 'profile__stat-value--danger' : ''}`}>
-              {customer.pendingAmount > 0 ? formatINR(customer.pendingAmount) : '₹0'}
+            <span className={`profile__stat-value ${customerPendingAmount > 0 ? 'profile__stat-value--danger' : ''}`}>
+              {customerPendingAmount > 0 ? formatINR(customerPendingAmount) : '₹0'}
             </span>
           </div>
           <div className="profile__stat">

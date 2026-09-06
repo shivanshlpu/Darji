@@ -578,27 +578,35 @@ export const updateOrderStatus = async (req, res) => {
 export const deleteOrder = async (req, res) => {
   try {
     const idParam = req.params.id;
-    let query = { isDeleted: false };
+    let query = {};
     if (mongoose.Types.ObjectId.isValid(idParam)) {
       query = { _id: idParam };
     } else {
-      query = { orderNumber: idParam };
+      query = { $or: [{ orderNumber: idParam }, { tokenNumber: idParam }] };
     }
     if (req.shopId) query.shopId = req.shopId;
 
-    const order = await Order.findOneAndUpdate(
-      query,
-      { isDeleted: true, syncVersion: Date.now() },
-      { new: true }
-    );
+    // Completely remove the order document from the database
+    const order = await Order.findOneAndDelete(query);
 
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
+    // Recalculate customer stats if customerId exists so deleted advance/pending amounts are cleared
+    if (order.customerId) {
+      const remainingOrders = await Order.find({ customerId: order.customerId, isDeleted: false });
+      const newTotalSpending = remainingOrders.reduce((s, o) => s + (Number(o.grandTotal || o.totalAmount || o.subtotal || 0)), 0);
+      const newPendingAmount = remainingOrders.reduce((s, o) => s + (Number(o.pendingAmount !== undefined ? o.pendingAmount : (o.balanceDue !== undefined ? o.balanceDue : 0))), 0);
+      await Customer.findByIdAndUpdate(order.customerId, {
+        totalSpending: newTotalSpending,
+        pendingAmount: newPendingAmount,
+      }).catch(() => {});
+    }
+
     res.json({
       success: true,
-      message: `Order #${order.tokenNumber || order.orderNumber} deleted successfully`,
+      message: `Order #${order.tokenNumber || order.orderNumber} deleted successfully from database`,
       data: order,
     });
   } catch (err) {

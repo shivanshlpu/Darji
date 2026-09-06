@@ -25,23 +25,34 @@ export default function PendingPaymentsModal({ isOpen, onClose }) {
     const custMap = new Map();
 
     (orders || []).forEach(o => {
-      if (['completed', 'delivered', 'cancelled'].includes(o.status)) return;
-      const pAmt = o.pendingAmount || 0;
+      if (o.status === 'cancelled') return;
+      const pAmt = Number(o.pendingAmount !== undefined ? o.pendingAmount : (o.balanceDue !== undefined ? o.balanceDue : 0));
       if (pAmt <= 0) return;
 
-      const custKey = o.customerId || o.customerName;
+      const custIdStr = typeof o.customerId === 'object' && o.customerId !== null
+        ? String(o.customerId._id || o.customerId.id || '')
+        : String(o.customerId || '');
+      const custNameStr = String(
+        (typeof o.customerId === 'object' && o.customerId !== null && o.customerId.name) ||
+        o.customerName ||
+        ''
+      ).trim();
+      const custKey = custIdStr || custNameStr.toLowerCase() || String(o._id);
       if (!custKey) return;
 
       let existing = custMap.get(custKey);
       if (!existing) {
-        const foundCust = customers.find(c =>
-          c._id === o.customerId ||
-          (c.name && o.customerName && typeof c.name === 'string' && typeof o.customerName === 'string' && c.name.toLowerCase() === o.customerName.toLowerCase())
-        );
+        const foundCust = (typeof o.customerId === 'object' && o.customerId !== null && o.customerId.name)
+          ? o.customerId
+          : (customers || []).find(c =>
+              (custIdStr && String(c._id) === custIdStr) ||
+              (c.name && custNameStr && c.name.trim().toLowerCase() === custNameStr.toLowerCase())
+            );
+
         existing = {
-          _id: foundCust?._id || o.customerId || `cust_${Math.random().toString(36).substr(2, 6)}`,
-          name: foundCust?.name || o.customerName || 'Customer',
-          mobile: foundCust?.mobile || o.customerMobile || '+91 99999 99999',
+          _id: foundCust?._id || custIdStr || `cust_${Math.random().toString(36).substr(2, 6)}`,
+          name: foundCust?.name || custNameStr || 'Customer',
+          mobile: foundCust?.mobile || o.customerMobile || o.customerPhone || '+91 99999 99999',
           gender: foundCust?.gender || 'male',
           photoUrl: foundCust?.photoUrl || null,
           totalPending: 0,
@@ -83,7 +94,7 @@ export default function PendingPaymentsModal({ isOpen, onClose }) {
     const sAddr = shopInfo?.address || '80/LIG 1ST New Housing Board Colony, Shahdol (M.P.) 484001';
     const sPhone = shopInfo?.phone || '+919479487828, +917000621972';
 
-    let text = `🧾 *DARJI — PAYMENT REMINDER* 🧾\n\nNamaste *${cust.name} ji*! 🙏\nThis is a gentle reminder regarding your pending balance of *₹${pAmt.toLocaleString('en-IN')}* at *DARJI*.\n\nPlease clear the pending amount at your earliest convenience or upon pickup.\n\n📍 Address: ${sAddr}\n📞 Contact: ${sPhone}\n\nThank you for choosing *Darji*!`;
+    let text = `🧾 *DARJI — PAYMENT REMINDER* 🧾\n\nNamaste *${cust.name} ji*! 🙏\nThis is a gentle reminder regarding your pending balance of *₹${cust.totalPending.toLocaleString('en-IN')}* at *DARJI*.\n\nPlease clear the pending amount at your earliest convenience or upon pickup.\n\n📍 Address: ${sAddr}\n📞 Contact: ${sPhone}\n\nThank you for choosing *Darji*!`;
 
     try {
       await apiClient.sendWhatsAppTest({ mobile: phone, text });
@@ -197,7 +208,7 @@ export default function PendingPaymentsModal({ isOpen, onClose }) {
                               {ord.items?.map(i => i.name).join(', ') || 'Custom Garment'}
                             </span>
                             <span className="pending-card__order-bal">
-                              Due: {formatAmount(ord.pendingAmount || (ord.subtotal - (ord.paidAmount || 0)))}
+                              Due: {formatAmount(ord.pendingAmount !== undefined ? ord.pendingAmount : (ord.balanceDue !== undefined ? ord.balanceDue : ((ord.grandTotal || ord.subtotal || 0) - (ord.paidAmount || 0))))}
                             </span>
                             <button
                               type="button"

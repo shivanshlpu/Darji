@@ -422,8 +422,11 @@ const useAppStore = create((set, get) => ({
 
     try {
       await api.deleteOrder(targetId);
+      useCustomerStore.getState().fetchCustomersFromDB();
     } catch (err) {
-      console.warn('[deleteOrder DB Warning]:', err.message);
+      console.error('[deleteOrder DB Error]:', err.message);
+      get().fetchOrdersFromDB();
+      throw err;
     }
   },
 

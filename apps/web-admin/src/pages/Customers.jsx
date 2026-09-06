@@ -5,6 +5,7 @@ import {
   IndianRupee, Calendar, MoreVertical, Edit, Trash2, Eye, X, User, MapPin, Tag
 } from 'lucide-react';
 import useCustomerStore from '../store/customerStore';
+import useAppStore from '../store/appStore';
 import { compressImage } from '../utils/imageCompressor';
 import './Customers.css';
 
@@ -20,6 +21,7 @@ export default function Customers() {
     sortBy, sortOrder, setSort, getFilteredCustomers, addCustomer,
     deleteCustomer, fetchCustomersFromDB
   } = useCustomerStore();
+  const { orders } = useAppStore();
 
   useEffect(() => {
     fetchCustomersFromDB();
@@ -32,7 +34,47 @@ export default function Customers() {
     name: '', mobile: '', whatsapp: '', address: '', gender: 'male', notes: '', tags: []
   });
 
-  const filteredCustomers = useMemo(() => getFilteredCustomers(), [searchQuery, activeFilters, sortBy, sortOrder, getFilteredCustomers]);
+  const filteredCustomers = useMemo(() => {
+    const rawList = getFilteredCustomers();
+    if (!orders || orders.length === 0) return rawList;
+
+    const orderMap = new Map();
+    orders.forEach(o => {
+      if (!o || o.status === 'cancelled') return;
+      const pAmt = Number(o.pendingAmount !== undefined ? o.pendingAmount : (o.balanceDue !== undefined ? o.balanceDue : 0));
+      const total = Number(o.grandTotal || o.totalAmount || o.subtotal || 0);
+      const cIdStr = typeof o.customerId === 'object' && o.customerId !== null ? String(o.customerId._id || '') : String(o.customerId || '');
+      const cName = o.customerName ? o.customerName.trim().toLowerCase() : '';
+
+      const addStats = (key) => {
+        if (!key) return;
+        if (!orderMap.has(key)) orderMap.set(key, { pending: 0, spending: 0 });
+        const entry = orderMap.get(key);
+        entry.pending += pAmt;
+        entry.spending += total;
+      };
+
+      if (cIdStr) addStats(cIdStr);
+      if (cName) addStats(cName);
+    });
+
+    let list = rawList.map(c => {
+      const statsById = orderMap.get(String(c._id));
+      const statsByName = c.name ? orderMap.get(c.name.trim().toLowerCase()) : null;
+      const stats = statsById || statsByName;
+      return {
+        ...c,
+        pendingAmount: stats ? stats.pending : 0,
+        totalSpending: stats ? stats.spending : 0,
+      };
+    });
+
+    if (activeFilters.pendingOnly) {
+      list = list.filter(c => (c.pendingAmount || 0) > 0);
+    }
+
+    return list;
+  }, [getFilteredCustomers, orders, activeFilters.pendingOnly]);
   const activeFilterCount = (activeFilters.tags.length > 0 ? 1 : 0) + (activeFilters.pendingOnly ? 1 : 0);
 
   const handleAddCustomer = (e) => {
