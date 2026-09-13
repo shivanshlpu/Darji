@@ -51,8 +51,8 @@ export default function App() {
           <ProtectedRoute><AppLayout /></ProtectedRoute>
         }>
           <Route index element={<Dashboard />} />
-          <Route path="customers" element={<Navigate to="/orders" replace />} />
-          <Route path="customers/:id" element={<Navigate to="/orders" replace />} />
+          <Route path="customers" element={<Customers />} />
+          <Route path="customers/:id" element={<CustomerProfile />} />
           <Route path="orders" element={<Orders />} />
           <Route path="billing" element={<Billing />} />
           <Route path="expenses" element={<Expenses />} />

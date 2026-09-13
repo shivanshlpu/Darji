@@ -39,6 +39,8 @@ export default function Billing() {
   const [isSendingPdf, setIsSendingPdf] = useState(false);
   const [isSavingBill, setIsSavingBill] = useState(false);
   const [pdfMsg, setPdfMsg] = useState(null);
+  const [orderToDelete, setOrderToDelete] = useState(null);
+  const [isDeletingOrder, setIsDeletingOrder] = useState(false);
 
   // ── DIRECT BILLING STATE (CREATE BILL WITHOUT ORDER FIRST) ──
   const [showDirectBillModal, setShowDirectBillModal] = useState(false);
@@ -695,15 +697,11 @@ export default function Billing() {
                     type="button"
                     className="billing__action-btn"
                     style={{ background: '#fee2e2', color: '#dc2626', borderColor: '#fca5a5' }}
-                    onClick={async () => {
+                    onClick={() => {
                       if (!selectedInvoiceOrder) return;
                       const order = orders.find(o => o._id === selectedInvoiceOrder || o.orderNumber === selectedInvoiceOrder);
                       if (!order) return;
-                      const tokenOrNum = order.tokenNumber ? `Token #${order.tokenNumber}` : order.orderNumber;
-                      if (window.confirm(`Are you sure you want to delete ${tokenOrNum} (${order.customerName}) from your database? Only this specific bill will be deleted.`)) {
-                        await deleteOrder(order._id);
-                        setSelectedInvoiceOrder(null);
-                      }
+                      setOrderToDelete(order);
                     }}
                     title="Delete this order from database"
                   >
@@ -1235,6 +1233,154 @@ export default function Billing() {
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Centered App-Themed Order/Bill Delete Confirmation Modal */}
+      {orderToDelete && (
+        <div
+          className="modal-overlay"
+          onClick={() => !isDeletingOrder && setOrderToDelete(null)}
+          style={{ zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div
+            className="modal animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '440px',
+              width: '92%',
+              padding: 0,
+              overflow: 'hidden',
+              borderRadius: '16px',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-default)',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)',
+            }}
+          >
+            <div style={{ padding: '28px 24px 20px 24px', textAlign: 'center' }}>
+              <div
+                style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  background: '#fef2f2',
+                  color: '#dc2626',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 16px auto',
+                  border: '1px solid #fecaca',
+                }}
+              >
+                <Trash2 size={26} />
+              </div>
+
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 8px 0' }}>
+                {language === 'hi' ? 'क्या आप यह बिल/ऑर्डर डिलीट करना चाहते हैं?' : 'Delete This Bill / Order?'}
+              </h3>
+
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+                {language === 'hi'
+                  ? `क्या आप वाकई ${orderToDelete.tokenNumber ? `Token #${orderToDelete.tokenNumber}` : orderToDelete.orderNumber} (${orderToDelete.customerName}) को डेटाबेस से डिलीट करना चाहते हैं?`
+                  : `Are you sure you want to delete ${orderToDelete.tokenNumber ? `Token #${orderToDelete.tokenNumber}` : orderToDelete.orderNumber} (${orderToDelete.customerName}) from your database?`}
+              </p>
+
+              <div
+                style={{
+                  background: 'var(--bg-primary)',
+                  border: '1px solid var(--border-default)',
+                  borderRadius: '10px',
+                  padding: '12px 14px',
+                  textAlign: 'left',
+                  fontSize: '12px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontWeight: 700, color: '#b45309', background: '#fef3c7', padding: '2px 8px', borderRadius: '12px', fontSize: '11px' }}>
+                    Token #{orderToDelete.tokenNumber || '—'}
+                  </span>
+                  <span style={{ color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                    {orderToDelete.orderNumber}
+                  </span>
+                </div>
+                <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)', marginBottom: '3px' }}>
+                  {orderToDelete.customerName}
+                </div>
+                {orderToDelete.customerMobile && (
+                  <div style={{ color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                    📞 {orderToDelete.customerMobile}
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '6px', borderTop: '1px dashed var(--border-default)' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>
+                    {orderToDelete.items?.length || 1} item{(orderToDelete.items?.length || 1) > 1 ? 's' : ''}
+                  </span>
+                  <span style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '13px' }}>
+                    {formatINR(orderToDelete.grandTotal || orderToDelete.totalAmount || orderToDelete.subtotal || 0)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: '16px 24px',
+                background: 'var(--bg-primary)',
+                borderTop: '1px solid var(--border-default)',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '10px',
+              }}
+            >
+              <button
+                type="button"
+                className="modal__btn modal__btn--secondary"
+                onClick={() => setOrderToDelete(null)}
+                disabled={isDeletingOrder}
+                style={{ padding: '8px 18px', fontSize: '13px', fontWeight: 600 }}
+              >
+                {language === 'hi' ? 'रद्द करें' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!orderToDelete) return;
+                  setIsDeletingOrder(true);
+                  try {
+                    await deleteOrder(orderToDelete._id || orderToDelete.orderNumber);
+                    setSelectedInvoiceOrder(null);
+                    setOrderToDelete(null);
+                  } catch (err) {
+                    console.error('Failed to delete order:', err);
+                  } finally {
+                    setIsDeletingOrder(false);
+                  }
+                }}
+                disabled={isDeletingOrder}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 20px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  color: 'white',
+                  background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+                  border: '1px solid #b91c1c',
+                  borderRadius: 'var(--radius-md)',
+                  cursor: isDeletingOrder ? 'not-allowed' : 'pointer',
+                  opacity: isDeletingOrder ? 0.7 : 1,
+                  boxShadow: '0 2px 8px rgba(220, 38, 38, 0.3)',
+                }}
+              >
+                <Trash2 size={15} />
+                <span>
+                  {isDeletingOrder
+                    ? (language === 'hi' ? 'डिलीट हो रहा है...' : 'Deleting...')
+                    : (language === 'hi' ? 'हाँ, डिलीट करें' : 'Delete')}
+                </span>
+              </button>
             </div>
           </div>
         </div>

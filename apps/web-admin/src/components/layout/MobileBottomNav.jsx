@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, Scissors, FileText, Receipt, BarChart3, Settings
+  LayoutDashboard, Scissors, Users, FileText, Receipt, BarChart3, Settings
 } from 'lucide-react';
 import useLanguageStore from '../../store/languageStore';
 import './MobileBottomNav.css';
@@ -13,6 +13,7 @@ export default function MobileBottomNav() {
   const navItems = [
     { path: '/', label: t('dashboard', 'Dashboard'), icon: LayoutDashboard },
     { path: '/orders', label: t('orders', 'Orders'), icon: Scissors },
+    { path: '/customers', label: t('customers', 'Customers'), icon: Users },
     { path: '/billing', label: t('billing', 'Billing'), icon: FileText },
     { path: '/expenses', label: t('expenses', 'Expenses'), icon: Receipt },
     { path: '/reports', label: t('reports', 'Reports'), icon: BarChart3 },

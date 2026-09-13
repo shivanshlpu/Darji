@@ -2,13 +2,15 @@ import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Phone, MessageCircle, MapPin, Calendar, IndianRupee,
-  Edit, Ruler, ClipboardList, CreditCard, Clock, Plus, ChevronDown, ChevronUp, History, Camera
+  Edit, Ruler, ClipboardList, CreditCard, Clock, Plus, ChevronDown, ChevronUp, History, Camera,
+  FileText, Download
 } from 'lucide-react';
 import useCustomerStore from '../store/customerStore';
 import useAppStore from '../store/appStore';
 import useMeasurementStore from '../store/measurementStore';
+import useSettingsStore from '../store/settingsStore';
+import { generateCustomerPDF } from '../utils/generateCustomerPDF';
 import { compressImage } from '../utils/imageCompressor';
-import { generateMeasurements } from '../data/mockData';
 import { MEASUREMENT_CATEGORIES, ORDER_STATUSES, PAYMENT_STATUSES, getCategoryConfig } from '../constants';
 import PaymentHistoryModal from '../components/PaymentHistoryModal';
 import './CustomerProfile.css';
@@ -21,6 +23,7 @@ export default function CustomerProfile() {
   const { customers, selectCustomer, selectedCustomer, updateCustomer, fetchCustomersFromDB } = useCustomerStore();
   const { getOrdersByCustomer, fetchOrdersFromDB, orders: allOrders } = useAppStore();
   const { measurements, addMeasurement, getLatestByCategory, getHistory, fetchMeasurementsFromDB } = useMeasurementStore();
+  const { shopInfo } = useSettingsStore();
 
   useEffect(() => {
     fetchCustomersFromDB();
@@ -117,9 +120,40 @@ export default function CustomerProfile() {
   return (
     <div className="profile">
       {/* Header */}
-      <button className="profile__back" onClick={() => navigate('/customers')}>
-        <ArrowLeft size={18} /> Back to Customers
-      </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+        <button className="profile__back" onClick={() => navigate('/customers')}>
+          <ArrowLeft size={18} /> Back to Customers
+        </button>
+
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            type="button"
+            className="customers__pdf-btn"
+            onClick={() => {
+              generateCustomerPDF([{ ...customer, orders, totalSpending: customerTotalSpending, pendingAmount: customerPendingAmount }], {
+                mode: 'detailsOnly',
+                title: `${customer.name} - Customer Details`,
+                shopInfo,
+              });
+            }}
+          >
+            <FileText size={15} className="customers__pdf-icon" /> Details (PDF)
+          </button>
+          <button
+            type="button"
+            className="customers__pdf-btn"
+            onClick={() => {
+              generateCustomerPDF([{ ...customer, orders, totalSpending: customerTotalSpending, pendingAmount: customerPendingAmount }], {
+                mode: 'withOrders',
+                title: `${customer.name} - Orders Statement`,
+                shopInfo,
+              });
+            }}
+          >
+            <ClipboardList size={15} className="customers__pdf-icon" /> Orders Statement (PDF)
+          </button>
+        </div>
+      </div>
 
       {/* Customer Info Card */}
       <div className="profile__hero">

@@ -33,6 +33,25 @@ async function findOrderByIdOrNumber(idParam) {
   return order;
 }
 
+/**
+ * Dispatches a short, professional "Thank You" WhatsApp notification from "DARJI"
+ * thanking the customer for choosing DARJI and inviting them to visit again (pure English, no amounts).
+ */
+export async function sendThankYouWhatsAppNotification(order) {
+  try {
+    const rawMobile = order?.customerMobile || order?.customerPhone;
+    if (!rawMobile) return;
+    const custName = order.customerName || 'Valued Customer';
+
+    const thankYouText = `Dear ${custName},\n\nThank you for choosing DARJI! We truly appreciate your visit and trust in our service. We look forward to welcoming you again.\n\nWarm regards,\nDARJI`;
+
+    await sendWhatsappMessage(rawMobile, thankYouText);
+    console.log(`✅ [WhatsApp Thank You] Delivered to ${rawMobile} for ${custName}`);
+  } catch (err) {
+    console.warn(`⚠️ [WhatsApp Thank You Warning] Could not deliver to ${order?.customerMobile}:`, err.message);
+  }
+}
+
 export const getOrders = async (req, res) => {
   try {
     const { status, paymentStatus, customerId } = req.query;
@@ -245,21 +264,32 @@ export const updateOrder = async (req, res) => {
     
     // Preserve existing payments or calculate from payments array
     let currentPayments = Array.isArray(req.body.payments) ? req.body.payments : (order.payments || []);
-    let advancePaid = req.body.advancePaid !== undefined ? Math.round(Number(req.body.advancePaid)) : (req.body.paidAmount !== undefined ? Math.round(Number(req.body.paidAmount)) : (order.advancePaid || order.paidAmount || 0));
-    
-    if (currentPayments.length > 0) {
+    const hasExplicitAdvance = req.body.advancePaid !== undefined || req.body.paidAmount !== undefined;
+    let advancePaid = 0;
+
+    if (hasExplicitAdvance) {
+      const explicitVal = req.body.advancePaid !== undefined ? Math.round(Number(req.body.advancePaid)) : Math.round(Number(req.body.paidAmount));
+      advancePaid = Math.max(0, isNaN(explicitVal) ? 0 : explicitVal);
+      if (advancePaid === 0) {
+        // Explicitly zeroed out advance payment
+        currentPayments = [];
+      } else if (currentPayments.length <= 1) {
+        currentPayments = [{
+          amount: advancePaid,
+          mode: req.body.paymentMode || (currentPayments[0]?.mode || 'cash'),
+          type: advancePaid >= grandTotal ? 'final' : 'advance',
+          date: currentPayments[0]?.date || order.orderDate || order.createdAt || new Date(),
+          notes: currentPayments[0]?.notes || (advancePaid >= grandTotal ? 'Full payment' : 'Advance payment'),
+          receivedBy: req.user?.name || 'Owner',
+        }];
+      }
+    } else if (currentPayments.length > 0) {
       advancePaid = currentPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
-    } else if (advancePaid > 0 && currentPayments.length === 0) {
-      currentPayments = [{
-        amount: advancePaid,
-        mode: req.body.paymentMode || 'cash',
-        type: 'advance',
-        date: order.orderDate || order.createdAt || new Date(),
-        notes: 'Initial payment record',
-        receivedBy: req.user?.name || 'Owner',
-      }];
+    } else {
+      advancePaid = Math.round(Number(order.advancePaid || order.paidAmount || 0));
     }
 
+    const wasAlreadyPaid = (order.paymentStatus === 'paid' || (order.balanceDue !== undefined && order.balanceDue <= 0));
     const balanceDue = Math.max(0, grandTotal - advancePaid);
     const paymentStatus = balanceDue <= 0 ? 'paid' : advancePaid > 0 ? 'partial' : 'unpaid';
 
@@ -297,6 +327,10 @@ export const updateOrder = async (req, res) => {
     }
 
     await order.save();
+
+    if (!wasAlreadyPaid && paymentStatus === 'paid') {
+      sendThankYouWhatsAppNotification(order);
+    }
 
     // Auto-create/update measurement entries in Measurement collection for the customer
     if (Array.isArray(items) && order.customerId) {
@@ -390,6 +424,9 @@ export const markOrderAsPaid = async (req, res) => {
 
     await order.save();
 
+    // Trigger Thank You WhatsApp notification from "DARJI"
+    sendThankYouWhatsAppNotification(order);
+
     res.json({ success: true, data: order });
   } catch (err) {
     console.error('[Mark Paid Error]:', err);
@@ -446,6 +483,11 @@ export const addOrderPayment = async (req, res) => {
     order.syncVersion = (order.syncVersion || 0) + 1;
 
     await order.save();
+
+    // If payment clears the entire balance, trigger Thank You WhatsApp notification from "DARJI"
+    if (order.balanceDue <= 0 || order.paymentStatus === 'paid') {
+      sendThankYouWhatsAppNotification(order);
+    }
 
     res.status(201).json({ success: true, data: order });
   } catch (err) {

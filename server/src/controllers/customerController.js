@@ -1,5 +1,7 @@
+import mongoose from 'mongoose';
 import Customer from '../models/Customer.js';
 import Order from '../models/Order.js';
+import Measurement from '../models/Measurement.js';
 
 export const getCustomers = async (req, res) => {
   try {
@@ -158,13 +160,52 @@ export const updateCustomer = async (req, res) => {
 
 export const deleteCustomer = async (req, res) => {
   try {
-    const customer = await Customer.findOneAndUpdate(
-      { _id: req.params.id, shopId: req.shopId },
-      { isDeleted: true, $inc: { syncVersion: 1 } },
-      { new: true }
-    );
-    res.json({ success: true, message: 'Customer deleted (soft delete)' });
+    const id = req.params.id;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      let customer = await Customer.findById(id);
+      if (!customer && req.shopId) {
+        customer = await Customer.findOne({ _id: id, shopId: req.shopId });
+      }
+      if (customer) {
+        customer.isDeleted = true;
+        customer.syncVersion = (customer.syncVersion || 1) + 1;
+        await customer.save();
+      } else {
+        await Customer.updateOne({ _id: id }, { $set: { isDeleted: true }, $inc: { syncVersion: 1 } });
+      }
+
+      await Measurement.updateMany({ customerId: id }, { $set: { isDeleted: true } });
+    }
+
+    res.json({ success: true, message: 'Customer deleted successfully' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+export const bulkDeleteCustomers = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'No customer IDs provided' });
+    }
+
+    const validObjectIds = ids.filter(id => mongoose.Types.ObjectId.isValid(id));
+    if (validObjectIds.length > 0) {
+      await Customer.updateMany(
+        { _id: { $in: validObjectIds } },
+        { $set: { isDeleted: true }, $inc: { syncVersion: 1 } }
+      );
+
+      await Measurement.updateMany(
+        { customerId: { $in: validObjectIds } },
+        { $set: { isDeleted: true } }
+      );
+    }
+
+    res.json({ success: true, message: `${ids.length} customers deleted successfully` });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+

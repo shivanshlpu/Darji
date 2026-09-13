@@ -9,7 +9,9 @@ const useMeasurementStore = create((set, get) => ({
   fetchMeasurementsFromDB: async (customerId) => {
     try {
       if (!customerId) return;
-      const res = await apiClient.getMeasurements(customerId);
+      const cleanId = typeof customerId === 'object' && customerId !== null ? (customerId._id || customerId.id) : customerId;
+      if (!cleanId || cleanId === '[object Object]') return;
+      const res = await apiClient.getMeasurements(cleanId);
       if (res.success && Array.isArray(res.data)) {
         set(state => {
           const existingIds = new Set(state.measurements.map(m => m._id));

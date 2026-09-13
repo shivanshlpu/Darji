@@ -88,9 +88,11 @@ export default function Orders() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editItems, setEditItems] = useState([]);
   const [editTotalAmount, setEditTotalAmount] = useState(0);
-  const [editAdvancePaid, setEditAdvancePaid] = useState(0);
+  const [editAdvancePaid, setEditAdvancePaid] = useState('0');
   const [editDeliveryDate, setEditDeliveryDate] = useState('');
   const [editStatus, setEditStatus] = useState('pending');
+  const [orderToDelete, setOrderToDelete] = useState(null);
+  const [isDeletingOrder, setIsDeletingOrder] = useState(false);
 
   const openEditModal = async (order, e) => {
     if (e) {
@@ -113,7 +115,7 @@ export default function Orders() {
     setEditItems(JSON.parse(JSON.stringify(populatedItems)));
     const tot = order.totalAmount || order.subtotal || 0;
     setEditTotalAmount(tot);
-    setEditAdvancePaid(order.advancePaid || order.paidAmount || 0);
+    setEditAdvancePaid(order.advancePaid !== undefined ? String(order.advancePaid) : (order.paidAmount !== undefined ? String(order.paidAmount) : '0'));
     setEditDeliveryDate(order.deliveryDate ? new Date(order.deliveryDate).toISOString().slice(0, 10) : '');
     setEditStatus(order.status || 'pending');
     setShowEditModal(true);
@@ -166,7 +168,7 @@ export default function Orders() {
 
     const subtotal = finalEditItems.reduce((s, i) => s + (Number(i.qty || 1) * Number(i.price || 0)), 0);
     const totalAmount = Number(editTotalAmount) || subtotal;
-    const advancePaid = Number(editAdvancePaid) || 0;
+    const advancePaid = editAdvancePaid === '' ? 0 : (parseFloat(editAdvancePaid) || 0);
     const balanceDue = Math.max(0, totalAmount - advancePaid);
     const paymentStatus = balanceDue <= 0 ? 'paid' : advancePaid > 0 ? 'partial' : 'unpaid';
 
@@ -236,28 +238,35 @@ export default function Orders() {
     setReschedulingOrderId(null);
   };
 
-  const handleDeleteOrder = async (order, e) => {
+  const promptDeleteOrder = (order, e) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
     if (!order) return;
-    const tokenOrNum = order.tokenNumber ? `Token #${order.tokenNumber}` : order.orderNumber;
-    const confirmMsg = language === 'hi'
-      ? `क्या आप वाकई ${tokenOrNum} (${order.customerName}) को डेटाबेस से डिलीट करना चाहते हैं? केवल यही विशिष्ट ऑर्डर डेटाबेस से हटेगा।`
-      : `Are you sure you want to delete ${tokenOrNum} (${order.customerName}) from your database? Only this specific order will be deleted.`;
+    setOrderToDelete(order);
+  };
 
-    if (window.confirm(confirmMsg)) {
-      try {
-        await deleteOrder(order._id || order.orderNumber);
-        showToast(language === 'hi' ? `🗑️ ${tokenOrNum} को डेटाबेस से डिलीट कर दिया गया!` : `🗑️ ${tokenOrNum} deleted from database!`);
-        if (showEditModal && editingOrder && (editingOrder._id === order._id || editingOrder.orderNumber === order.orderNumber)) {
-          setShowEditModal(false);
-          setEditingOrder(null);
-        }
-      } catch (err) {
-        showToast(`❌ Failed to delete order: ${err.message}`);
+  const handleDeleteOrder = (order, e) => {
+    promptDeleteOrder(order, e);
+  };
+
+  const handleConfirmDeleteOrder = async () => {
+    if (!orderToDelete) return;
+    const tokenOrNum = orderToDelete.tokenNumber ? `Token #${orderToDelete.tokenNumber}` : orderToDelete.orderNumber;
+    setIsDeletingOrder(true);
+    try {
+      await deleteOrder(orderToDelete._id || orderToDelete.orderNumber);
+      showToast(language === 'hi' ? `🗑️ ${tokenOrNum} को डेटाबेस से डिलीट कर दिया गया!` : `🗑️ ${tokenOrNum} deleted from database!`);
+      if (showEditModal && editingOrder && (editingOrder._id === orderToDelete._id || editingOrder.orderNumber === orderToDelete.orderNumber)) {
+        setShowEditModal(false);
+        setEditingOrder(null);
       }
+      setOrderToDelete(null);
+    } catch (err) {
+      showToast(`❌ Failed to delete order: ${err.message}`);
+    } finally {
+      setIsDeletingOrder(false);
     }
   };
 
@@ -691,7 +700,9 @@ export default function Orders() {
       items: finalOrderItems,
       subtotal,
       paidAmount: paid,
+      advancePaid: paid,
       pendingAmount: pending,
+      balanceDue: pending,
       paymentStatus,
       timeline: [{ status: 'pending', timestamp: new Date().toISOString(), updatedBy: 'Admin' }],
       createdAt: new Date().toISOString(),
@@ -1718,7 +1729,8 @@ export default function Orders() {
                   <label>Token Money / Advance Paid (₹)</label>
                   <input
                     type="number"
-                    placeholder="e.g. 500"
+                    min="0"
+                    placeholder="0"
                     value={advancePaid}
                     onFocus={(e) => e.target.select()}
                     onChange={(e) => setAdvancePaid(e.target.value)}
@@ -2109,10 +2121,11 @@ export default function Orders() {
                   <label>Advance Amount Paid (₹)</label>
                   <input
                     type="number"
-                    value={editAdvancePaid === 0 ? '' : editAdvancePaid}
+                    min="0"
+                    value={editAdvancePaid}
                     placeholder="0"
                     onFocus={(e) => e.target.select()}
-                    onChange={(e) => setEditAdvancePaid(e.target.value === '' ? 0 : Number(e.target.value))}
+                    onChange={(e) => setEditAdvancePaid(e.target.value)}
                   />
                 </div>
               </div>
@@ -2128,8 +2141,8 @@ export default function Orders() {
 
               <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', fontSize: '13px', display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <span>Calculated Balance Due:</span>
-                <strong style={{ color: Math.max(0, editTotalAmount - editAdvancePaid) > 0 ? '#dc2626' : '#16a34a' }}>
-                  ₹ {Math.max(0, editTotalAmount - editAdvancePaid).toLocaleString('en-IN')}
+                <strong style={{ color: Math.max(0, editTotalAmount - (parseFloat(editAdvancePaid) || 0)) > 0 ? '#dc2626' : '#16a34a' }}>
+                  ₹ {Math.max(0, editTotalAmount - (parseFloat(editAdvancePaid) || 0)).toLocaleString('en-IN')}
                 </strong>
               </div>
 
@@ -2170,6 +2183,144 @@ export default function Orders() {
           setShowAddModal(true);
         }}
       />
+      {/* Centered App-Themed Order Delete Confirmation Modal */}
+      {orderToDelete && (
+        <div
+          className="modal-overlay"
+          onClick={() => !isDeletingOrder && setOrderToDelete(null)}
+          style={{ zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div
+            className="modal animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '440px',
+              width: '92%',
+              padding: 0,
+              overflow: 'hidden',
+              borderRadius: '16px',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-default)',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)',
+            }}
+          >
+            <div style={{ padding: '28px 24px 20px 24px', textAlign: 'center' }}>
+              <div
+                style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  background: '#fef2f2',
+                  color: '#dc2626',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 16px auto',
+                  border: '1px solid #fecaca',
+                }}
+              >
+                <Trash2 size={26} />
+              </div>
+
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 8px 0' }}>
+                {language === 'hi' ? 'क्या आप यह ऑर्डर हटाना चाहते हैं?' : 'Delete This Order?'}
+              </h3>
+
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+                {language === 'hi'
+                  ? `क्या आप वाकई ${orderToDelete.tokenNumber ? `Token #${orderToDelete.tokenNumber}` : orderToDelete.orderNumber} (${orderToDelete.customerName}) को डेटाबेस से डिलीट करना चाहते हैं? केवल यही विशिष्ट ऑर्डर हटाया जाएगा।`
+                  : `Are you sure you want to delete ${orderToDelete.tokenNumber ? `Token #${orderToDelete.tokenNumber}` : orderToDelete.orderNumber} (${orderToDelete.customerName}) from your database? Only this specific order will be deleted.`}
+              </p>
+
+              {/* Order Info Card Preview */}
+              <div
+                style={{
+                  background: 'var(--bg-primary)',
+                  border: '1px solid var(--border-default)',
+                  borderRadius: '10px',
+                  padding: '12px 14px',
+                  textAlign: 'left',
+                  fontSize: '12px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontWeight: 700, color: '#b45309', background: '#fef3c7', padding: '2px 8px', borderRadius: '12px', fontSize: '11px' }}>
+                    Token #{orderToDelete.tokenNumber || '—'}
+                  </span>
+                  <span style={{ color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                    {orderToDelete.orderNumber}
+                  </span>
+                </div>
+                <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)', marginBottom: '3px' }}>
+                  {orderToDelete.customerName}
+                </div>
+                {orderToDelete.customerMobile && (
+                  <div style={{ color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                    📞 {orderToDelete.customerMobile}
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '6px', borderTop: '1px dashed var(--border-default)' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>
+                    {orderToDelete.items?.length || 1} item{(orderToDelete.items?.length || 1) > 1 ? 's' : ''}
+                  </span>
+                  <span style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '13px' }}>
+                    {formatINR(orderToDelete.grandTotal || orderToDelete.totalAmount || orderToDelete.subtotal || 0)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: '16px 24px',
+                background: 'var(--bg-primary)',
+                borderTop: '1px solid var(--border-default)',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '10px',
+              }}
+            >
+              <button
+                type="button"
+                className="modal__btn modal__btn--secondary"
+                onClick={() => setOrderToDelete(null)}
+                disabled={isDeletingOrder}
+                style={{ padding: '8px 18px', fontSize: '13px', fontWeight: 600 }}
+              >
+                {language === 'hi' ? 'रद्द करें' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteOrder}
+                disabled={isDeletingOrder}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 20px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  color: 'white',
+                  background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+                  border: '1px solid #b91c1c',
+                  borderRadius: 'var(--radius-md)',
+                  cursor: isDeletingOrder ? 'not-allowed' : 'pointer',
+                  opacity: isDeletingOrder ? 0.7 : 1,
+                  boxShadow: '0 2px 8px rgba(220, 38, 38, 0.3)',
+                }}
+              >
+                <Trash2 size={15} />
+                <span>
+                  {isDeletingOrder
+                    ? (language === 'hi' ? 'डिलीट हो रहा है...' : 'Deleting...')
+                    : (language === 'hi' ? 'हाँ, डिलीट करें' : 'Delete Order')}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Floating Toast Notification Banner */}
       {toastMsg && (
         <div style={{

@@ -3,7 +3,7 @@ import { protect } from '../middleware/auth.js';
 import { auditLog } from '../middleware/audit.js';
 
 import { login, getMe, updatePassword } from '../controllers/authController.js';
-import { getCustomers, getCustomerById, createCustomer, updateCustomer, deleteCustomer } from '../controllers/customerController.js';
+import { getCustomers, getCustomerById, createCustomer, updateCustomer, deleteCustomer, bulkDeleteCustomers } from '../controllers/customerController.js';
 import { getCustomerMeasurements, createMeasurementVersion } from '../controllers/measurementController.js';
 import { getOrders, createOrder, updateOrder, deleteOrder, markOrderAsPaid, updateOrderStatus, addOrderPayment, updateOrderPayment, deleteOrderPayment, migrateExistingOrderPayments } from '../controllers/orderController.js';
 import { addPayment } from '../controllers/paymentController.js';
@@ -32,6 +32,7 @@ router.get('/customers/:id', protect, getCustomerById);
 router.post('/customers', protect, auditLog('Customer', 'CREATE'), createCustomer);
 router.put('/customers/:id', protect, auditLog('Customer', 'UPDATE'), updateCustomer);
 router.delete('/customers/:id', protect, auditLog('Customer', 'DELETE'), deleteCustomer);
+router.post('/customers/bulk-delete', protect, auditLog('Customer', 'BULK_DELETE'), bulkDeleteCustomers);
 
 // Measurements
 router.get('/customers/:customerId/measurements', protect, getCustomerMeasurements);

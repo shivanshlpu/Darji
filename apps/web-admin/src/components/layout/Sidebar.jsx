@@ -15,6 +15,7 @@ import './Sidebar.css';
 const navItems = [
   { path: '/', icon: LayoutDashboard, labelKey: 'dashboard', label: 'Dashboard' },
   { path: '/orders', icon: ClipboardList, labelKey: 'orders', label: 'Orders' },
+  { path: '/customers', icon: Users, labelKey: 'customers', label: 'Customers' },
   { path: '/billing', icon: FileText, labelKey: 'billing', label: 'Billing' },
   { path: '/expenses', icon: Wallet, labelKey: 'expenses', label: 'Expenses' },
   { path: '/reports', icon: BarChart3, labelKey: 'reports', label: 'Sales & Reports' },

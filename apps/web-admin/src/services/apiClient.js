@@ -41,6 +41,7 @@ export const api = {
   createCustomer: (data) => request('/customers', { method: 'POST', body: JSON.stringify(data) }),
   updateCustomer: (id, data) => request(`/customers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteCustomer: (id) => request(`/customers/${id}`, { method: 'DELETE' }),
+  bulkDeleteCustomers: (ids) => request('/customers/bulk-delete', { method: 'POST', body: JSON.stringify({ ids }) }),
 
   // Measurements
   getMeasurements: (customerId) => request(`/customers/${customerId}/measurements`),

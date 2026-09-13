@@ -8,7 +8,7 @@ const useCustomerStore = create((set, get) => ({
   customers: initialCustomers,
   selectedCustomer: null,
   searchQuery: '',
-  activeFilters: { tags: [], pendingOnly: false },
+  activeFilters: { pendingOnly: false },
   sortBy: 'name',
   sortOrder: 'asc',
 
@@ -31,7 +31,7 @@ const useCustomerStore = create((set, get) => ({
     activeFilters: { ...state.activeFilters, [key]: value },
   })),
 
-  clearFilters: () => set({ searchQuery: '', activeFilters: { tags: [], pendingOnly: false } }),
+  clearFilters: () => set({ searchQuery: '', activeFilters: { pendingOnly: false } }),
 
   setSort: (field) => set(state => ({
     sortBy: field,
@@ -51,11 +51,7 @@ const useCustomerStore = create((set, get) => ({
       );
     }
 
-    if (activeFilters.tags.length > 0) {
-      filtered = filtered.filter(c =>
-        activeFilters.tags.some(t => c.tags?.includes(t))
-      );
-    }
+
 
     if (activeFilters.pendingOnly) {
       filtered = filtered.filter(c => c.pendingAmount > 0);
@@ -116,14 +112,30 @@ const useCustomerStore = create((set, get) => ({
   },
 
   deleteCustomer: async (id) => {
+    set(state => ({
+      customers: state.customers.filter(c => c._id !== id && String(c._id) !== String(id)),
+    }));
     try {
       await api.deleteCustomer(id);
     } catch (err) {
       console.warn('API deleteCustomer fallback:', err.message);
     }
+    await get().fetchCustomersFromDB();
+  },
+
+  deleteCustomers: async (ids) => {
+    if (!Array.isArray(ids) || ids.length === 0) return;
+    const idSet = new Set(ids.map(i => String(i)));
     set(state => ({
-      customers: state.customers.filter(c => c._id !== id),
+      customers: state.customers.filter(c => !idSet.has(String(c._id))),
     }));
+    try {
+      await api.bulkDeleteCustomers(ids);
+    } catch (err) {
+      console.warn('API bulkDeleteCustomers fallback:', err.message);
+      await Promise.all(ids.map(id => api.deleteCustomer(id).catch(() => {})));
+    }
+    await get().fetchCustomersFromDB();
   },
 }));
 
