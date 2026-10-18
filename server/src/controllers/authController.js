@@ -13,70 +13,107 @@ const generateToken = (id) => {
   });
 };
 
+/**
+ * Enforces that only the designated single owner ID remains active with all data preserved.
+ */
+export const ensureSingleActiveAdmin = async () => {
+  try {
+    const targetAdminPhone = process.env.ADMIN_PHONE ? String(process.env.ADMIN_PHONE).replace(/\D/g, '').slice(-10) : '9479487828';
+    // Pre-computed Bcrypt hash for default owner password (non-plaintext, non-reversible)
+    const DEFAULT_OWNER_BCRYPT = '$2a$10$JWbvM0k7IeAvR15VLLGBy.yc128rCINt6KdIiA18EPf.gmKu208Du';
+
+    // Find the owner user
+    let owner = await User.findOne({ role: 'owner' });
+    if (!owner) {
+      owner = await User.findOne({});
+    }
+
+    if (owner) {
+      let needsSave = false;
+      if (owner.phone !== targetAdminPhone) {
+        owner.phone = targetAdminPhone;
+        needsSave = true;
+      }
+      if (owner.role !== 'owner') {
+        owner.role = 'owner';
+        needsSave = true;
+      }
+      if (!owner.isActive) {
+        owner.isActive = true;
+        needsSave = true;
+      }
+      if (!owner.passwordHash) {
+        owner.passwordHash = DEFAULT_OWNER_BCRYPT;
+        needsSave = true;
+      }
+      if (needsSave) {
+        await owner.save();
+        console.log(`🔒 [Security] Single active owner credentials secured for ${targetAdminPhone}`);
+      }
+
+      // Ensure any other accounts are deactivated so ONLY this single ID remains active
+      await User.updateMany(
+        { _id: { $ne: owner._id } },
+        { $set: { isActive: false } }
+      );
+    }
+  } catch (err) {
+    console.error('⚠️ [Security] Failed to ensure single active admin:', err.message);
+  }
+};
+
 export const login = async (req, res) => {
   try {
-    let { phone, password } = req.body;
-    const digits = String(phone || '').replace(/\D/g, '').slice(-10);
+    const { phone, password } = req.body;
+    if (!phone || !password) {
+      return res.status(401).json({ success: false, message: 'Invalid phone number or password' });
+    }
 
-    let user = await User.findOne({
+    const digits = String(phone || '').replace(/\D/g, '').slice(-10);
+    const targetAdminPhone = process.env.ADMIN_PHONE ? String(process.env.ADMIN_PHONE).replace(/\D/g, '').slice(-10) : '9479487828';
+
+    // Strict check: Only the designated mobile number is permitted
+    if (digits !== targetAdminPhone) {
+      return res.status(401).json({ success: false, message: 'Invalid phone number or password' });
+    }
+
+    const user = await User.findOne({
       $or: [
         { phone: digits },
-        { phone: phone ? phone.trim() : '' },
         { phone: `+91${digits}` },
-        { role: 'owner' },
+        { phone: `+91 ${digits}` },
       ],
+      isActive: { $ne: false },
     }).populate('shopId');
 
     if (!user) {
-      // Auto seed on first login if database is fresh
-      await seedDefaultData();
-      user = await User.findOne({
-        $or: [
-          { phone: digits },
-          { phone: phone ? phone.trim() : '' },
-          { role: 'owner' },
-        ],
-      }).populate('shopId');
+      return res.status(401).json({ success: false, message: 'Invalid phone number or password' });
     }
 
-    // Migration / credential sync for primary owner account dynamically from request or environment
-    const targetAdminPhone = process.env.ADMIN_PHONE ? String(process.env.ADMIN_PHONE).replace(/\D/g, '').slice(-10) : '';
-    const targetAdminPass = process.env.ADMIN_PASSWORD || '';
-
-    if (user && user.role === 'owner') {
-      if (digits && user.phone !== digits && (digits === targetAdminPhone || digits.length === 10)) {
-        user.phone = digits;
-      }
-      if (password && (password === targetAdminPass || password.length >= 6)) {
-        const salt = await bcrypt.genSalt(10);
-        user.passwordHash = await bcrypt.hash(password, salt);
-        await user.save();
-      }
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid phone number or password' });
     }
 
-    if (user && (await bcrypt.compare(password, user.passwordHash))) {
-      user.lastLoginAt = new Date();
-      await user.save();
+    user.lastLoginAt = new Date();
+    await user.save();
 
-      return res.json({
-        success: true,
-        token: generateToken(user._id),
-        user: {
-          _id: user._id,
-          name: user.name,
-          phone: user.phone,
-          email: user.email,
-          role: user.role,
-          permissions: user.permissions,
-          shopId: user.shopId._id,
-          shopName: user.shopId.name,
-        },
-      });
-    }
-
-    return res.status(401).json({ success: false, message: 'Invalid phone or password' });
+    return res.json({
+      success: true,
+      token: generateToken(user._id),
+      user: {
+        _id: user._id,
+        name: user.name,
+        phone: user.phone,
+        email: user.email,
+        role: user.role,
+        permissions: user.permissions,
+        shopId: user.shopId?._id || user.shopId,
+        shopName: user.shopId?.name || 'Darji Premium Tailors',
+      },
+    });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'An error occurred during authentication' });
   }
 };
 
@@ -87,14 +124,17 @@ export const getMe = async (req, res) => {
 export const updatePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    const user = await User.findById(req.user._id);
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Please provide current and new passwords' });
+    }
 
+    const user = await User.findById(req.user._id);
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
     const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
-    if (!isMatch && process.env.ADMIN_PASSWORD && currentPassword !== process.env.ADMIN_PASSWORD) {
+    if (!isMatch) {
       return res.status(400).json({ success: false, message: 'Current password is incorrect!' });
     }
 
@@ -102,7 +142,7 @@ export const updatePassword = async (req, res) => {
     user.passwordHash = await bcrypt.hash(newPassword, salt);
     await user.save();
 
-    res.json({ success: true, message: 'Password updated successfully in database!' });
+    res.json({ success: true, message: 'Password updated successfully!' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -114,7 +154,7 @@ export const seedDefaultData = async () => {
 
   const defaultPhone = process.env.ADMIN_PHONE || '9479487828';
   // Irreversible pre-computed Bcrypt hash for owner password (safe for public git)
-  const PRECOMPUTED_OWNER_BCRYPT = '$2a$10$/BRVXK6BvpC4ltbqnmBe6ut9FLEge2SBzjphcWUdL.uawGKoCkRbW';
+  const PRECOMPUTED_OWNER_BCRYPT = '$2a$10$JWbvM0k7IeAvR15VLLGBy.yc128rCINt6KdIiA18EPf.gmKu208Du';
 
   console.log('🌱 Seeding initial MongoDB Atlas demo data...');
   const shop = await Shop.create({
@@ -126,7 +166,7 @@ export const seedDefaultData = async () => {
   });
 
   const salt = await bcrypt.genSalt(10);
-  const ownerHash = process.env.ADMIN_PASSWORD ? await bcrypt.hash(process.env.ADMIN_PASSWORD, salt) : PRECOMPUTED_OWNER_BCRYPT;
+  const ownerHash = PRECOMPUTED_OWNER_BCRYPT;
   const staffHash = await bcrypt.hash('staff123', salt);
 
   await User.create([

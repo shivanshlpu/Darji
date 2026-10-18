@@ -9,13 +9,16 @@ import apiRoutes from './routes/api.js';
 import whatsappRoutes from './routes/whatsapp.routes.js';
 import { initWhatsapp } from './services/whatsapp.service.js';
 
+import { ensureSingleActiveAdmin } from './controllers/authController.js';
+
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Connect Database
-connectDB().then(() => {
+connectDB().then(async () => {
+  await ensureSingleActiveAdmin();
   // Initialize Baileys WhatsApp Engine
   initWhatsapp();
 });

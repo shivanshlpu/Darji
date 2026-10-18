@@ -53,7 +53,7 @@ export default function Billing() {
   const [directCustPhone, setDirectCustPhone] = useState('');
   const [directCustAddress, setDirectCustAddress] = useState('');
   const [directBillItems, setDirectBillItems] = useState([
-    { name: 'Top Wear', category: 'topWear', qty: 1, price: 1200 }
+    { name: 'Suit (Salwar)', category: 'suit', subtype: 'Salwar', qty: 1, price: 500 }
   ]);
   const [directDiscountType, setDirectDiscountType] = useState('amount'); // 'amount' | 'percent'
   const [directDiscountValue, setDirectDiscountValue] = useState(0);
@@ -136,7 +136,7 @@ export default function Billing() {
     setDirectCustCountryCode('+91');
     setDirectCustPhone('');
     setDirectCustAddress('');
-    setDirectBillItems([{ name: 'Top Wear', category: 'topWear', qty: 1, price: 1200 }]);
+    setDirectBillItems([{ name: 'Suit (Salwar)', category: 'suit', subtype: 'Salwar', qty: 1, price: 500 }]);
     setDirectDiscountType('amount');
     setDirectDiscountValue(0);
     setDirectExtraCharges(0);
@@ -944,9 +944,10 @@ export default function Billing() {
                     type="button"
                     style={{ background: 'var(--color-gold-500)', color: '#fff', border: 'none', borderRadius: '4px', padding: '5px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                     onClick={() => {
+                      const suit = GARMENT_CATEGORIES[0];
                       setDirectBillItems([
                         ...directBillItems,
-                        { name: 'Bottom Wear', category: 'bottomWear', qty: 1, price: 1000 }
+                        { name: suit.defaultName, category: suit.value, subtype: suit.defaultSubtype || '', qty: 1, price: suit.defaultPrice }
                       ]);
                     }}
                   >
@@ -958,13 +959,17 @@ export default function Billing() {
                   <div key={idx} className="billing__direct-item-card">
                     <div className="billing__direct-item-top">
                       <select
-                        value={item.category || 'topWear'}
+                        value={item.category || 'suit'}
                         className="billing__direct-item-select"
                         onChange={(e) => {
                           const updated = [...directBillItems];
                           updated[idx].category = e.target.value;
                           const match = GARMENT_CATEGORIES.find(g => g.value === e.target.value);
-                          if (match) updated[idx].name = match.defaultName;
+                          if (match) {
+                            updated[idx].name = match.defaultName;
+                            updated[idx].price = match.defaultPrice;
+                            updated[idx].subtype = match.defaultSubtype || '';
+                          }
                           setDirectBillItems(updated);
                         }}
                       >

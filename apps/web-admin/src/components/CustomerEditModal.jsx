@@ -13,7 +13,7 @@ export default function CustomerEditModal({ customerData, customerId, isOpen, on
   const { orders } = useAppStore();
 
   const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'measurements' | 'actions'
-  const [activeCategory, setActiveCategory] = useState('topWear');
+  const [activeCategory, setActiveCategory] = useState('suit');
   const [measurementFields, setMeasurementFields] = useState({});
   const [isSaved, setIsSaved] = useState(false);
 

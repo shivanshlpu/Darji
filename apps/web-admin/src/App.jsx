@@ -35,7 +35,9 @@ export default function App() {
   useEffect(() => {
     restoreSession();
     initTheme();
-    fetchSettingsFromDB();
+    if (useAuthStore.getState().isAuthenticated) {
+      fetchSettingsFromDB();
+    }
   }, []);
 
   return (

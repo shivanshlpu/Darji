@@ -35,7 +35,7 @@ export default function CustomerProfile() {
   const [activeTab, setActiveTab] = useState('measurements');
   const [showMeasurementModal, setShowMeasurementModal] = useState(false);
   const [paymentHistoryOrder, setPaymentHistoryOrder] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState('topWear');
+  const [selectedCategory, setSelectedCategory] = useState('suit');
   const [measurementFields, setMeasurementFields] = useState({});
   const [customKeyName, setCustomKeyName] = useState('');
   const [customKeyValue, setCustomKeyValue] = useState('');

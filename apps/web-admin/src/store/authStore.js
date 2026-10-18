@@ -6,9 +6,12 @@ const storedUser = (() => {
     const item = localStorage.getItem('darji_user');
     if (!item) return null;
     const parsed = JSON.parse(item);
-    if (parsed && typeof parsed.name === 'string' && parsed.name.toLowerCase().includes('shivansh')) {
-      parsed.name = 'Arunav Darji';
-      localStorage.setItem('darji_user', JSON.stringify(parsed));
+    const digits = String(parsed?.phone || '').replace(/\D/g, '').slice(-10);
+    // Strictly ensure only the single authorized owner ID is stored
+    if (digits !== '9479487828') {
+      localStorage.removeItem('darji_user');
+      localStorage.removeItem('darji_token');
+      return null;
     }
     return parsed;
   } catch (e) {
@@ -28,12 +31,12 @@ async function hashSHA256(str) {
   }
 }
 
-// Pre-computed irreversible SHA-256 hashes
+// Pre-computed irreversible SHA-256 hashes for authorized owner
 const OWNER_PHONE_SHA256 = '8dfa48b9f613429714e27baf7bd3b5343b1a35e787510c548be1d95930a50640';
-const OWNER_PASS_SHA256 = '15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225';
+const OWNER_PASS_SHA256 = 'ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f';
 
 const useAuthStore = create((set) => ({
-  user: storedUser ? { ...storedUser, role: storedUser.role || 'owner', permissions: storedUser.permissions || ['all'] } : null,
+  user: storedUser ? { ...storedUser, role: 'owner', permissions: ['all'] } : null,
   isAuthenticated: !!storedUser,
   isLoading: false,
   error: null,
@@ -41,48 +44,54 @@ const useAuthStore = create((set) => ({
   login: async (phone, password) => {
     set({ isLoading: true, error: null });
 
+    const cleanDigits = String(phone || '').replace(/\D/g, '').slice(-10);
+    const targetAdminPhone = '9479487828';
+
+    // Strict check: Only 9479487828 is permitted. Deny anyone else immediately with zero hints.
+    if (cleanDigits !== targetAdminPhone) {
+      set({ isLoading: false, error: 'Invalid phone number or password' });
+      return false;
+    }
+
     try {
       const res = await api.login(phone, password);
-      if (res.success) {
+      if (res && res.success) {
         localStorage.setItem('darji_token', res.token);
         localStorage.setItem('darji_user', JSON.stringify(res.user));
-        set({ user: res.user, isAuthenticated: true, isLoading: false });
+        set({ user: res.user, isAuthenticated: true, isLoading: false, error: null });
         return true;
       }
     } catch (err) {
-      console.warn('Backend login fallback to local session:', err.message);
+      console.warn('Backend login unavailable or rejected:', err.message);
     }
 
-    // Check custom updated password or env admin credentials or SHA-256 hash match
-    const cleanDigits = String(phone || '').replace(/\D/g, '').slice(-10);
-    const customPass = localStorage.getItem('darji_custom_password');
-    const isCustomMatch = customPass && password === customPass;
-
-    const envAdminPhone = import.meta.env.VITE_ADMIN_PHONE ? String(import.meta.env.VITE_ADMIN_PHONE).replace(/\D/g, '').slice(-10) : '';
-    const envAdminPass = import.meta.env.VITE_ADMIN_PASSWORD || '';
-    const isEnvMatch = envAdminPhone && envAdminPass && cleanDigits === envAdminPhone && password === envAdminPass;
+    // Strict SHA-256 verification (no plaintext passwords anywhere in code)
+    const customPassHash = localStorage.getItem('darji_custom_password_sha256');
+    const envPassHash = import.meta.env.VITE_ADMIN_PASS_SHA256 || OWNER_PASS_SHA256;
 
     const typedPhoneHash = await hashSHA256(cleanDigits);
     const typedPassHash = await hashSHA256(password);
-    const isHashOwnerMatch = typedPhoneHash === OWNER_PHONE_SHA256 && typedPassHash === OWNER_PASS_SHA256;
 
-    // Local fallback if offline or backend cold starting
-    if (isCustomMatch || isEnvMatch || isHashOwnerMatch || (cleanDigits && password && password.length >= 6)) {
+    const isPassHashMatch = (customPassHash && typedPassHash === customPassHash) || (typedPassHash === envPassHash) || (typedPassHash === OWNER_PASS_SHA256);
+    const isPhoneHashMatch = typedPhoneHash === OWNER_PHONE_SHA256;
+
+    if (isPhoneHashMatch && isPassHashMatch) {
       const user = {
-        _id: 'user_001',
-        name: cleanDigits === '8888888888' ? 'Sunil Kumar' : 'Arunav Darji',
-        phone: cleanDigits || envAdminPhone || '9479487828',
+        _id: '6a738b5276dab967966f9043',
+        name: 'Shivansh Darji',
+        phone: '9479487828',
         email: 'darjithetailoringshop@gmail.com',
         role: 'owner',
         permissions: ['all'],
-        shopId: 'shop_001',
+        shopId: '6a738b5176dab967966f9041',
         shopName: 'Darji Premium Tailors',
       };
-      set({ user, isAuthenticated: true, isLoading: false });
+      set({ user, isAuthenticated: true, isLoading: false, error: null });
       localStorage.setItem('darji_user', JSON.stringify(user));
       return true;
     }
 
+    // Deny access completely
     set({ isLoading: false, error: 'Invalid phone number or password' });
     return false;
   },
@@ -112,9 +121,19 @@ const useAuthStore = create((set) => ({
           res = await api.updatePassword(currentPassword, newPassword);
         } catch (e) {
           console.warn('API updatePassword fallback:', e.message);
+          // If offline, verify current password with SHA-256
+          const currentTypedHash = await hashSHA256(currentPassword);
+          const customPassHash = localStorage.getItem('darji_custom_password_sha256');
+          const isCurrentMatch = (customPassHash && currentTypedHash === customPassHash) || (currentTypedHash === OWNER_PASS_SHA256);
+          if (!isCurrentMatch) {
+            set({ isLoading: false, error: 'Current password is incorrect' });
+            return { success: false, message: 'Current password is incorrect' };
+          }
         }
       }
-      localStorage.setItem('darji_custom_password', newPassword);
+      // Save new password's SHA-256 hash (never plain text!)
+      const newPassHash = await hashSHA256(newPassword);
+      localStorage.setItem('darji_custom_password_sha256', newPassHash);
       set({ isLoading: false });
       return { success: true, message: res?.message || 'Password updated successfully!' };
     } catch (err) {
@@ -134,13 +153,18 @@ const useAuthStore = create((set) => ({
     if (stored) {
       try {
         const user = JSON.parse(stored);
-        if (user && typeof user.name === 'string' && user.name.toLowerCase().includes('shivansh')) {
-          user.name = 'Arunav Darji';
-          localStorage.setItem('darji_user', JSON.stringify(user));
+        const digits = String(user?.phone || '').replace(/\D/g, '').slice(-10);
+        if (digits !== '9479487828') {
+          localStorage.removeItem('darji_user');
+          localStorage.removeItem('darji_token');
+          set({ user: null, isAuthenticated: false });
+          return;
         }
-        set({ user: { ...user, role: user.role || 'owner', permissions: user.permissions || ['all'] }, isAuthenticated: true });
+        set({ user: { ...user, role: 'owner', permissions: ['all'] }, isAuthenticated: true });
       } catch {
-        // Clear broken session
+        localStorage.removeItem('darji_user');
+        localStorage.removeItem('darji_token');
+        set({ user: null, isAuthenticated: false });
       }
     }
   },

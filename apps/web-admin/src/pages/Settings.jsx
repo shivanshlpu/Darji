@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  Store, FileText, Database, Shield, CheckCircle, Save, QrCode, MessageSquare, LogOut, Send, RefreshCw, Smartphone, Download, Image, Trash2, Upload, Plus, PhoneCall, SlidersHorizontal
+  Store, FileText, Database, Shield, CheckCircle, Save, QrCode, MessageSquare, LogOut, Send, RefreshCw, Smartphone, Download, Image, Trash2, Upload, Plus, PhoneCall, SlidersHorizontal, Lock, Eye, EyeOff
 } from 'lucide-react';
 import PwaInstallPrompt from '../components/PwaInstallPrompt';
 import useSettingsStore from '../store/settingsStore';
@@ -23,6 +23,10 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordMsg, setPasswordMsg] = useState(null);
   const [passwordError, setPasswordError] = useState(null);
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   // Live WhatsApp Test Message Sender State
   const [testMobile, setTestMobile] = useState('');
@@ -94,15 +98,22 @@ export default function SettingsPage() {
       return;
     }
 
-    const res = await updatePassword(currentPassword, newPassword);
-    if (res.success) {
-      setPasswordMsg(language === 'hi' ? 'पासवर्ड सफलता से अपडेट हो गया है! अगली बार नए पासवर्ड से लॉगिन करें।' : 'Password updated successfully! Log in with your new password next time.');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setTimeout(() => setPasswordMsg(null), 4000);
-    } else {
-      setPasswordError(res.message);
+    setIsUpdatingPassword(true);
+    try {
+      const res = await updatePassword(currentPassword, newPassword);
+      if (res && res.success) {
+        setPasswordMsg(language === 'hi' ? '✅ पासवर्ड सफलतापूर्वक अपडेट हो गया है! अगली बार नए पासवर्ड से लॉगिन करें।' : '✅ Password updated successfully! Log in with your new password next time.');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setTimeout(() => setPasswordMsg(null), 5000);
+      } else {
+        setPasswordError(res?.message || (language === 'hi' ? 'पासवर्ड अपडेट करने में समस्या आई' : 'Failed to update password'));
+      }
+    } catch (err) {
+      setPasswordError(err.message || (language === 'hi' ? 'पासवर्ड अपडेट करने में समस्या आई' : 'Failed to update password'));
+    } finally {
+      setIsUpdatingPassword(false);
     }
   };
 
@@ -687,69 +698,161 @@ export default function SettingsPage() {
 
           {activeTab === 'security' && (
             <>
-              <form onSubmit={handlePasswordUpdate} className="settings__card animate-fade-in">
-                <h3>{language === 'hi' ? 'खाता सुरक्षा एवं पासवर्ड अपडेट' : 'Account Security & Password Update'}</h3>
-                <p className="settings__hint">
-                  {language === 'hi'
-                    ? 'अपना पासवर्ड यहां से बदलें। अगली बार नए पासवर्ड का उपयोग करके लॉगिन करें।'
-                    : 'Change your account password directly here. Use your new password to sign in next time.'}
-                </p>
+              <div className="settings__card animate-fade-in">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(201,162,75,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gold-500)' }}>
+                    <Shield size={22} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0 }}>
+                      {language === 'hi' ? 'सुरक्षा व एडमिन पासवर्ड (Security & Password)' : 'Security & Admin Password'}
+                    </h3>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                      {language === 'hi'
+                        ? 'अपनी दुकान के एडमिन अकाउंट का पासवर्ड बदलें। पासवर्ड को SHA-256 व क्रिप्टोग्राफ़िक हैशिंग द्वारा सुरक्षित रखा जाता है।'
+                        : 'Change your shop admin login password. The password is encrypted with SHA-256 and Bcrypt cryptographic hashing.'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Status badges card */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', margin: '20px 0', padding: '16px', background: 'var(--bg-active, #f8fafc)', borderRadius: '12px', border: '1px solid var(--border-default, #e2e8f0)' }}>
+                  <div>
+                    <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', fontWeight: 700 }}>
+                      {language === 'hi' ? 'सक्रिय एडमिन मोबाइल' : 'Active Admin Mobile'}
+                    </span>
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--color-navy-800, #0f172a)', marginTop: '4px' }}>
+                      +91 9479487828
+                    </div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', fontWeight: 700 }}>
+                      {language === 'hi' ? 'सुरक्षा एन्क्रिप्शन' : 'Security Encryption'}
+                    </span>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#16a34a', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <CheckCircle size={15} /> SHA-256 + Bcrypt Salting
+                    </div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', fontWeight: 700 }}>
+                      {language === 'hi' ? 'एक्सेस नियंत्रण' : 'Access Control'}
+                    </span>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#0284c7', marginTop: '4px' }}>
+                      Single-ID Exclusive Access
+                    </div>
+                  </div>
+                </div>
 
                 {passwordMsg && (
-                  <div className="settings__saved" style={{ marginBottom: '1rem' }}>
-                    <CheckCircle size={16} /> {passwordMsg}
+                  <div style={{ padding: '12px 16px', borderRadius: '8px', background: 'rgba(34,197,94,0.1)', color: '#16a34a', border: '1px solid rgba(34,197,94,0.3)', marginBottom: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CheckCircle size={18} /> {passwordMsg}
                   </div>
                 )}
 
                 {passwordError && (
-                  <div style={{ color: 'var(--color-danger-500)', fontSize: '13px', marginBottom: '1rem', background: 'rgba(239,68,68,0.1)', padding: '8px 12px', borderRadius: '6px' }}>
+                  <div style={{ padding: '12px 16px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', color: '#dc2626', border: '1px solid rgba(239,68,68,0.3)', marginBottom: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
                     ⚠️ {passwordError}
                   </div>
                 )}
 
-                <div className="settings__grid" style={{ maxWidth: '500px' }}>
+                <form onSubmit={handlePasswordUpdate} style={{ maxWidth: '520px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div className="modal__field">
-                    <label>{language === 'hi' ? 'वर्तमान पासवर्ड *' : 'Current Password *'}</label>
-                    <input
-                      type="password"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                    />
+                    <label style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)' }}>
+                      {language === 'hi' ? 'वर्तमान पासवर्ड *' : 'Current Password *'}
+                    </label>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <input
+                        type={showCurrentPass ? 'text' : 'password'}
+                        placeholder={language === 'hi' ? 'अपना पुराना/वर्तमान पासवर्ड डालें' : 'Enter your current password'}
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        required
+                        style={{ width: '100%', padding: '10px 42px 10px 12px', borderRadius: '8px', border: '1px solid var(--border-default)', fontSize: '14px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPass(!showCurrentPass)}
+                        tabIndex={-1}
+                        style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center' }}
+                      >
+                        {showCurrentPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="modal__field">
-                    <label>{language === 'hi' ? 'नया पासवर्ड *' : 'New Password *'}</label>
-                    <input
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                    />
+                    <label style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)' }}>
+                      {language === 'hi' ? 'नया पासवर्ड *' : 'New Password *'}
+                    </label>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <input
+                        type={showNewPass ? 'text' : 'password'}
+                        placeholder={language === 'hi' ? 'नया सुरक्षित पासवर्ड डालें (कम से कम 4 अक्षर)' : 'Enter new secure password (min 4 characters)'}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        required
+                        style={{ width: '100%', padding: '10px 42px 10px 12px', borderRadius: '8px', border: '1px solid var(--border-default)', fontSize: '14px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPass(!showNewPass)}
+                        tabIndex={-1}
+                        style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center' }}
+                      >
+                        {showNewPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="modal__field">
-                    <label>{language === 'hi' ? 'नया पासवर्ड दोबारा दर्ज करें *' : 'Confirm New Password *'}</label>
-                    <input
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                    />
+                    <label style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)' }}>
+                      {language === 'hi' ? 'नए पासवर्ड की पुष्टि करें *' : 'Confirm New Password *'}
+                    </label>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <input
+                        type={showConfirmPass ? 'text' : 'password'}
+                        placeholder={language === 'hi' ? 'नया पासवर्ड दोबारा डालें' : 'Re-enter new password to confirm'}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        style={{ width: '100%', padding: '10px 42px 10px 12px', borderRadius: '8px', border: '1px solid var(--border-default)', fontSize: '14px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPass(!showConfirmPass)}
+                        tabIndex={-1}
+                        style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center' }}
+                      >
+                        {showConfirmPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                <div className="settings__footer" style={{ marginTop: '1.5rem' }}>
-                  <button type="submit" className="modal__btn modal__btn--primary">
-                    <Save size={16} /> {language === 'hi' ? 'पासवर्ड अपडेट करें' : 'Update Password'}
+                  <button
+                    type="submit"
+                    className="modal__btn modal__btn--primary"
+                    disabled={isUpdatingPassword || !currentPassword || !newPassword || !confirmPassword}
+                    style={{
+                      marginTop: '8px',
+                      padding: '12px 24px',
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      width: 'fit-content',
+                      cursor: (isUpdatingPassword || !currentPassword || !newPassword || !confirmPassword) ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    <Lock size={16} />
+                    {isUpdatingPassword
+                      ? (language === 'hi' ? 'पासवर्ड अपडेट हो रहा है...' : 'Updating Password...')
+                      : (language === 'hi' ? 'पासवर्ड अपडेट करें' : 'Update Password')}
                   </button>
-                </div>
-              </form>
+                </form>
+              </div>
 
-              {/* Explicit Account Sign Out / Logout Card */}
+              {/* Account Sign Out / Logout Card */}
               <div className="settings__card animate-fade-in" style={{ marginTop: '20px', borderColor: 'rgba(239, 68, 68, 0.25)', background: 'var(--bg-elevated)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
                   <div>
@@ -759,7 +862,7 @@ export default function SettingsPage() {
                     </h3>
                     <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
                       {language === 'hi'
-                        ? `वर्तमान में एक्टिव अकाउंट: ${user?.phone || '9479487828'} (${user?.name || 'Owner'})। नए पासवर्ड या अलग नंबर से लॉगिन करने के लिए बाहर निकलें।`
+                        ? `वर्तमान में एक्टिव अकाउंट: ${user?.phone || '9479487828'} (${user?.name || 'Owner'})। नए पासवर्ड से दोबारा लॉगिन करने के लिए बाहर निकलें।`
                         : `Currently signed in as ${user?.name || 'Owner'} (${user?.phone || '9479487828'}). Sign out to log in with new credentials.`}
                     </p>
                   </div>

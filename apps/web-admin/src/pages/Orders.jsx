@@ -2,13 +2,13 @@ import { useState, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   Search, Filter, Plus, Eye, ClipboardList, Package, Clock,
-  ChevronRight, SortAsc, SortDesc, X, CheckCircle, UserCheck, Printer, FileText, Share2, Tag, Edit, MessageCircle, Ruler, Sparkles, Calendar, Trash2, CreditCard
+  ChevronRight, ChevronDown, ChevronUp, SortAsc, SortDesc, X, CheckCircle, UserCheck, Printer, FileText, Share2, Tag, Edit, MessageCircle, Ruler, Sparkles, Calendar, Trash2, CreditCard
 } from 'lucide-react';
 import useAppStore from '../store/appStore';
 import useCustomerStore from '../store/customerStore';
 import useSettingsStore from '../store/settingsStore';
 import useMeasurementStore from '../store/measurementStore';
-import { ORDER_STATUSES, PAYMENT_STATUSES, PRIORITIES, MEASUREMENT_CATEGORIES, GARMENT_CATEGORIES, COUNTRY_PREFIXES, getCategoryConfig } from '../constants';
+import { ORDER_STATUSES, PAYMENT_STATUSES, PRIORITIES, MEASUREMENT_CATEGORIES, GARMENT_CATEGORIES, COUNTRY_PREFIXES, getCategoryConfig, getGarmentConfig, getGarmentDefaultPrice } from '../constants';
 import { printInvoiceHTML } from '../../../../shared/utils/generateInvoice';
 import { InvoiceTemplate } from '../../../../shared/components/InvoiceTemplate';
 import CustomerEditModal from '../components/CustomerEditModal';
@@ -93,6 +93,11 @@ export default function Orders() {
   const [editStatus, setEditStatus] = useState('pending');
   const [orderToDelete, setOrderToDelete] = useState(null);
   const [isDeletingOrder, setIsDeletingOrder] = useState(false);
+  const [editMeasExpanded, setEditMeasExpanded] = useState(false);
+  const [editActiveMeasIdx, setEditActiveMeasIdx] = useState(0);
+  const [editShowAddNewSize, setEditShowAddNewSize] = useState(false);
+  const [editNewSizeName, setEditNewSizeName] = useState('');
+  const [editNewSizeVal, setEditNewSizeVal] = useState('');
 
   const openEditModal = async (order, e) => {
     if (e) {
@@ -100,6 +105,12 @@ export default function Orders() {
       e.stopPropagation();
     }
     setEditingOrder(order);
+    setEditMeasExpanded(false);
+    setEditActiveMeasIdx(0);
+    setEditShowAddNewSize(false);
+    setEditNewSizeName('');
+    setEditNewSizeVal('');
+
     if (order.customerId) {
       await fetchMeasurementsFromDB(order.customerId);
     }
@@ -122,24 +133,56 @@ export default function Orders() {
   };
 
   const handleAddEditItem = () => {
+    const newCat = 'suit';
+    const gConfig = getGarmentConfig(newCat);
+    const defSub = gConfig.defaultSubtype || 'Salwar';
     const newItem = {
-      name: 'New Garment / Dress',
-      category: 'shirt',
+      name: `${gConfig.shortLabel || gConfig.defaultName} (${defSub})`,
+      category: newCat,
+      subtype: defSub,
       qty: 1,
-      price: 500,
+      price: gConfig.defaultPrice, // Suit: 500
+      notes: '',
       measurements: {}
     };
     const updated = [...editItems, newItem];
     setEditItems(updated);
+    setEditActiveMeasIdx(updated.length - 1);
     const newSum = updated.reduce((s, i) => s + (Number(i.qty || 1) * Number(i.price || 0)), 0);
     setEditTotalAmount(newSum);
   };
 
   const handleRemoveEditItem = (idx) => {
+    if (editItems.length <= 1) return;
     const updated = editItems.filter((_, i) => i !== idx);
+    setEditItems(updated);
+    if (editActiveMeasIdx >= updated.length) {
+      setEditActiveMeasIdx(Math.max(0, updated.length - 1));
+    }
+    const newSum = updated.reduce((s, i) => s + (Number(i.qty || 1) * Number(i.price || 0)), 0);
+    setEditTotalAmount(newSum);
+  };
+
+  const handleEditItemCategoryChange = (idx, newCategory) => {
+    const updated = [...editItems];
+    const gConfig = getGarmentConfig(newCategory);
+    const defSub = gConfig.defaultSubtype || (gConfig.subtypes && gConfig.subtypes[0]) || '';
+    const defPrice = gConfig.defaultPrice !== undefined ? gConfig.defaultPrice : 0;
+    updated[idx].category = newCategory;
+    updated[idx].subtype = defSub;
+    updated[idx].name = `${gConfig.shortLabel || gConfig.defaultName}${defSub ? ` (${defSub})` : ''}`;
+    updated[idx].price = defPrice;
     setEditItems(updated);
     const newSum = updated.reduce((s, i) => s + (Number(i.qty || 1) * Number(i.price || 0)), 0);
     setEditTotalAmount(newSum);
+  };
+
+  const handleEditItemSubtypeChange = (idx, newSubtype) => {
+    const updated = [...editItems];
+    const gConfig = getGarmentConfig(updated[idx].category);
+    updated[idx].subtype = newSubtype;
+    updated[idx].name = `${gConfig.shortLabel || gConfig.defaultName} (${newSubtype})`;
+    setEditItems(updated);
   };
 
   const handleEditItemChange = (idx, field, value) => {
@@ -150,18 +193,37 @@ export default function Orders() {
     setEditTotalAmount(newSum);
   };
 
+  const handleEditItemMeasurementChange = (idx, field, val) => {
+    const updated = [...editItems];
+    updated[idx].measurements = {
+      ...(updated[idx].measurements || {}),
+      [field]: val,
+    };
+    setEditItems(updated);
+  };
+
   const handleSaveEditedOrder = () => {
     if (!editingOrder) return;
 
-    // Auto-capture any unsubmitted custom measurements from the DOM
+    // Auto-capture any unsubmitted custom measurements
     const finalEditItems = [...editItems];
+    if (editNewSizeName.trim()) {
+      const activeIdx = Math.min(editActiveMeasIdx, Math.max(0, finalEditItems.length - 1));
+      if (finalEditItems[activeIdx]) {
+        finalEditItems[activeIdx].measurements = {
+          ...(finalEditItems[activeIdx].measurements || {}),
+          [editNewSizeName.trim()]: editNewSizeVal.trim(),
+        };
+      }
+    }
+
     finalEditItems.forEach((item, idx) => {
       const kEl = document.getElementById(`edit_custom_key_${idx}`);
       const vEl = document.getElementById(`edit_custom_val_${idx}`);
-      if (kEl && kEl.value.trim() && vEl && vEl.value.trim()) {
+      if (kEl && kEl.value.trim()) {
         item.measurements = {
           ...(item.measurements || {}),
-          [kEl.value.trim()]: vEl.value.trim()
+          [kEl.value.trim()]: vEl ? vEl.value.trim() : ''
         };
       }
     });
@@ -175,7 +237,7 @@ export default function Orders() {
     // 1. Save all edited measurements directly to customer profile & MongoDB Atlas
     finalEditItems.forEach(item => {
       if (item.measurements && Object.keys(item.measurements).length > 0) {
-        const catKey = item.category || 'topWear';
+        const catKey = item.category || 'suit';
         addMeasurement(
           editingOrder.customerId,
           editingOrder.customerName,
@@ -320,17 +382,28 @@ export default function Orders() {
   }, [customers, newCustMobile, newCustName, dismissDuplicateNotice]);
 
   // Order Items & Measurement details
-  const [orderItems, setOrderItems] = useState([
-    {
-      name: 'Top Wear',
-      category: 'topWear',
+  const [measExpanded, setMeasExpanded] = useState(false);
+  const [activeMeasItemIdx, setActiveMeasItemIdx] = useState(0);
+  const [showAddNewSize, setShowAddNewSize] = useState(false);
+  const [newSizeName, setNewSizeName] = useState('');
+  const [newSizeVal, setNewSizeVal] = useState('');
+
+  const createInitialOrderItem = (catKey = 'suit') => {
+    const g = getGarmentConfig(catKey);
+    const defSub = g.defaultSubtype || 'Salwar';
+    return {
+      name: `${g.shortLabel || g.defaultName} (${defSub})`,
+      category: g.value,
+      subtype: defSub,
       qty: 1,
-      price: 1200,
+      price: g.defaultPrice, // Suit: 500
       notes: '',
       measurements: {},
       isAutoFilled: false,
-    },
-  ]);
+    };
+  };
+
+  const [orderItems, setOrderItems] = useState([createInitialOrderItem('suit')]);
 
   // Auto-fetch & auto-fill customer measurements whenever an existing customer is selected
   useEffect(() => {
@@ -533,16 +606,14 @@ export default function Orders() {
 
   const handleItemCategoryChange = (index, newCategory) => {
     const updated = [...orderItems];
-    updated[index].category = newCategory;
+    const gConfig = getGarmentConfig(newCategory);
+    const defSub = gConfig.defaultSubtype || (gConfig.subtypes && gConfig.subtypes[0]) || '';
+    const defPrice = gConfig.defaultPrice !== undefined ? gConfig.defaultPrice : 0;
 
-    const matchedGarment = GARMENT_CATEGORIES.find(g => g.value === newCategory);
-    if (matchedGarment) {
-      updated[index].name = matchedGarment.defaultName;
-    } else if (newCategory === 'topWear') updated[index].name = 'Top Wear';
-    else if (newCategory === 'bottomWear') updated[index].name = 'Bottom Wear';
-    else if (newCategory === 'blouse') updated[index].name = 'Blouse';
-    else if (newCategory === 'ethnicFormal') updated[index].name = 'Ethnic / Formal';
-    else if (newCategory === 'other') updated[index].name = 'Custom Garment / Other';
+    updated[index].category = newCategory;
+    updated[index].subtype = defSub;
+    updated[index].name = `${gConfig.shortLabel || gConfig.defaultName}${defSub ? ` (${defSub})` : ''}`;
+    updated[index].price = defPrice;
 
     if (customerMode === 'existing' && selectedCustId) {
       const savedMeas = getCustomerMeasurementForCategory(selectedCustId, newCategory);
@@ -560,36 +631,51 @@ export default function Orders() {
     setOrderItems(updated);
   };
 
+  const handleItemSubtypeChange = (index, newSubtype) => {
+    const updated = [...orderItems];
+    const gConfig = getGarmentConfig(updated[index].category);
+    updated[index].subtype = newSubtype;
+    updated[index].name = `${gConfig.shortLabel || gConfig.defaultName} (${newSubtype})`;
+    setOrderItems(updated);
+  };
+
   const handleAddItem = () => {
-    const newCategory = 'bottomWear';
+    const newCat = 'suit';
+    const gConfig = getGarmentConfig(newCat);
+    const defSub = gConfig.defaultSubtype || 'Salwar';
     let autoMeas = {};
     let isAutoFilled = false;
 
     if (customerMode === 'existing' && selectedCustId) {
-      const savedMeas = getCustomerMeasurementForCategory(selectedCustId, newCategory);
+      const savedMeas = getCustomerMeasurementForCategory(selectedCustId, newCat);
       if (savedMeas && Object.keys(savedMeas).length > 0) {
         autoMeas = { ...savedMeas };
         isAutoFilled = true;
       }
     }
 
-    setOrderItems([
-      ...orderItems,
-      {
-        name: 'Bottom Wear',
-        category: newCategory,
-        qty: 1,
-        price: 1000,
-        notes: '',
-        measurements: autoMeas,
-        isAutoFilled,
-      },
-    ]);
+    const newItem = {
+      name: `${gConfig.shortLabel || gConfig.defaultName} (${defSub})`,
+      category: newCat,
+      subtype: defSub,
+      qty: 1,
+      price: gConfig.defaultPrice,
+      notes: '',
+      measurements: autoMeas,
+      isAutoFilled,
+    };
+    const newIdx = orderItems.length;
+    setOrderItems([...orderItems, newItem]);
+    setActiveMeasItemIdx(newIdx);
   };
 
   const handleRemoveItem = (index) => {
-    if (orderItems.length === 1) return;
-    setOrderItems(orderItems.filter((_, i) => i !== index));
+    if (orderItems.length <= 1) return;
+    const updated = orderItems.filter((_, i) => i !== index);
+    setOrderItems(updated);
+    if (activeMeasItemIdx >= updated.length) {
+      setActiveMeasItemIdx(Math.max(0, updated.length - 1));
+    }
   };
 
   const handleItemMeasurementChange = (itemIdx, field, val) => {
@@ -604,15 +690,24 @@ export default function Orders() {
   const handleCreateOrder = async (e) => {
     e.preventDefault();
 
-    // Auto-capture any unsubmitted custom measurements from the DOM
+    // Auto-capture any unsubmitted custom measurements
     const finalOrderItems = [...orderItems];
+    if (newSizeName.trim()) {
+      const activeIdx = Math.min(activeMeasItemIdx, Math.max(0, finalOrderItems.length - 1));
+      if (finalOrderItems[activeIdx]) {
+        finalOrderItems[activeIdx].measurements = {
+          ...(finalOrderItems[activeIdx].measurements || {}),
+          [newSizeName.trim()]: newSizeVal.trim(),
+        };
+      }
+    }
     finalOrderItems.forEach((item, idx) => {
       const kEl = document.getElementById(`new_custom_key_${idx}`);
       const vEl = document.getElementById(`new_custom_val_${idx}`);
-      if (kEl && kEl.value.trim() && vEl && vEl.value.trim()) {
+      if (kEl && kEl.value.trim()) {
         item.measurements = {
           ...(item.measurements || {}),
-          [kEl.value.trim()]: vEl.value.trim()
+          [kEl.value.trim()]: vEl ? vEl.value.trim() : ''
         };
       }
     });
@@ -757,17 +852,12 @@ export default function Orders() {
     setNewCustName('');
     setNewCustMobile('');
     setNewCustAddress('');
-    setOrderItems([
-      {
-        name: 'Top Wear',
-        category: 'topWear',
-        qty: 1,
-        price: 1200,
-        notes: '',
-        measurements: {},
-        isAutoFilled: false,
-      },
-    ]);
+    setMeasExpanded(false);
+    setActiveMeasItemIdx(0);
+    setShowAddNewSize(false);
+    setNewSizeName('');
+    setNewSizeVal('');
+    setOrderItems([createInitialOrderItem('suit')]);
     setAdvancePaid('');
   };
 
@@ -778,17 +868,12 @@ export default function Orders() {
     setNewCustName('');
     setNewCustMobile('');
     setNewCustAddress('');
-    setOrderItems([
-      {
-        name: 'Top Wear',
-        category: 'topWear',
-        qty: 1,
-        price: 1200,
-        notes: '',
-        measurements: {},
-        isAutoFilled: false,
-      },
-    ]);
+    setMeasExpanded(false);
+    setActiveMeasItemIdx(0);
+    setShowAddNewSize(false);
+    setNewSizeName('');
+    setNewSizeVal('');
+    setOrderItems([createInitialOrderItem('suit')]);
     setShowAddModal(true);
   };
 
@@ -1738,174 +1823,344 @@ export default function Orders() {
                 </div>
               </div>
 
-              {/* Order Items & Measurement Builder */}
-              <div className="orders__items-builder">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h4>Order Items & Specific Measurements ({orderItems.length})</h4>
-                  <button type="button" className="orders__add-item-btn" onClick={handleAddItem}>
-                    + Add Item
-                  </button>
-                </div>
+              {/* 1. Collapsible Measurements & Sizes Section at the very top */}
+              {(() => {
+                const safeActiveIdx = Math.min(activeMeasItemIdx, Math.max(0, orderItems.length - 1));
+                const activeItem = orderItems[safeActiveIdx] || orderItems[0];
+                const activeCategoryConfig = getCategoryConfig(activeItem?.category);
+                const activeFields = activeCategoryConfig?.fields || [];
+                const selectedCustObj = customers.find(c => c._id === selectedCustId);
+                const isExistingSelected = customerMode === 'existing' && selectedCustObj;
 
-                {orderItems.map((item, idx) => (
-                  <div key={idx} className="orders__item-card-builder">
-                    <div className="orders__item-row">
-                      <input
-                        type="text"
-                        placeholder="Item name (e.g. Silk Kurta)"
-                        value={item.name}
-                        onChange={(e) => {
-                          const updated = [...orderItems];
-                          updated[idx].name = e.target.value;
-                          setOrderItems(updated);
-                        }}
-                        required
-                      />
-                      <select
-                        value={item.category}
-                        onChange={(e) => handleItemCategoryChange(idx, e.target.value)}
-                      >
-                        {GARMENT_CATEGORIES.map((cat) => (
-                          <option key={cat.value} value={cat.value}>{cat.label}</option>
-                        ))}
-                      </select>
-                      <input
-                        type="number"
-                        placeholder="Qty"
-                        min="1"
-                        style={{ width: '65px' }}
-                        value={item.qty}
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) => {
-                          const updated = [...orderItems];
-                          updated[idx].qty = parseInt(e.target.value) || 1;
-                          setOrderItems(updated);
-                        }}
-                      />
-                      <input
-                        type="number"
-                        placeholder="Rate (₹)"
-                        style={{ width: '100px' }}
-                        value={item.price === 0 ? '' : item.price}
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) => {
-                          const updated = [...orderItems];
-                          updated[idx].price = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                          setOrderItems(updated);
-                        }}
-                      />
-                      {orderItems.length > 1 && (
-                        <button type="button" className="modal__close" onClick={() => handleRemoveItem(idx)}>✕</button>
-                      )}
+                // Count total filled measurements across all items for header badge
+                const totalFilledCount = orderItems.reduce((acc, it) => {
+                  return acc + Object.keys(it.measurements || {}).filter(k => String(it.measurements[k] || '').trim().length > 0).length;
+                }, 0);
+
+                return (
+                  <div className="orders__measurements-section">
+                    <div
+                      className="orders__measurements-header"
+                      onClick={() => setMeasExpanded(!measExpanded)}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <div className="orders__meas-title-wrap">
+                        <Ruler size={16} className="orders__meas-icon" />
+                        <span>Measurements & Sizes</span>
+                        <span className="orders__meas-meta-badge">
+                          {totalFilledCount > 0
+                            ? `${totalFilledCount} size${totalFilledCount > 1 ? 's' : ''} entered`
+                            : (measExpanded ? 'Enter body sizes' : 'Tap to expand')}
+                        </span>
+                      </div>
+                      <div className="orders__meas-header-right">
+                        <span className="orders__meas-toggle-hint">
+                          {measExpanded ? 'Collapse' : 'Expand'}
+                        </span>
+                        {measExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                      </div>
                     </div>
 
-                    {/* Category-Aware Labeled Measurement Fields */}
-                    {(() => {
-                      const categoryConfig = getCategoryConfig(item.category);
-                      const fields = categoryConfig?.fields || [];
-                      const selectedCustObj = customers.find(c => c._id === selectedCustId);
-                      const isExistingSelected = customerMode === 'existing' && selectedCustObj;
-
-                      return (
-                        <div className="orders__item-meas-container">
-                          <div className="orders__item-meas-header">
-                            <span>
-                              <Ruler size={13} /> {categoryConfig?.label || item.category} Sizes — {
-                                isExistingSelected
-                                  ? `${selectedCustObj.name} (${selectedCustObj.mobile})`
-                                  : (newCustName.trim() ? `${newCustName.trim()} (New Customer)` : 'New Walk-In Customer')
-                              }
-                            </span>
-                            {item.isAutoFilled && isExistingSelected ? (
-                              <span className="orders__auto-fill-badge">
-                                <Sparkles size={11} /> Auto-filled from {selectedCustObj.name}'s profile
-                              </span>
-                            ) : (
-                              <span className="orders__new-cust-meas-badge">
-                                {isExistingSelected ? 'Manual Entry' : 'New Sizes for Walk-In'}
-                              </span>
-                            )}
+                    {measExpanded && (
+                      <div className="orders__measurements-body animate-fade-in">
+                        {/* Garment Tabs when multiple order items/fabrics exist */}
+                        {orderItems.length > 1 && (
+                          <div className="orders__meas-tabs-wrapper">
+                            <span className="orders__meas-tabs-label">Select garment to edit sizes:</span>
+                            <div className="orders__meas-garment-tabs">
+                              {orderItems.map((it, idx) => {
+                                const itCat = getGarmentConfig(it.category);
+                                const itFilled = Object.keys(it.measurements || {}).filter(k => String(it.measurements[k] || '').trim().length > 0).length;
+                                return (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    className={`orders__meas-tab-btn ${safeActiveIdx === idx ? 'active' : ''}`}
+                                    onClick={() => setActiveMeasItemIdx(idx)}
+                                  >
+                                    #{idx + 1} {itCat.shortLabel || it.name}
+                                    {it.subtype ? ` (${it.subtype})` : ''}
+                                    {itFilled > 0 && <span className="orders__tab-meas-pill">{itFilled}</span>}
+                                  </button>
+                                );
+                              })}
+                            </div>
                           </div>
+                        )}
 
-                          <div className="orders__item-meas-grid-labeled">
-                            {fields.map(f => (
-                              <div key={f.key} className="orders__item-meas-field-box">
-                                <label>{f.label} ({f.unit})</label>
+                        {/* Active Garment Context & Autofill Badge */}
+                        <div className="orders__active-meas-info">
+                          <span className="orders__active-meas-title">
+                            {activeCategoryConfig?.label || activeItem.name} Sizes
+                            {isExistingSelected ? ` • ${selectedCustObj.name}` : ''}
+                          </span>
+                          {activeItem.isAutoFilled && isExistingSelected ? (
+                            <span className="orders__auto-fill-badge">
+                              <Sparkles size={11} /> Auto-filled from customer profile
+                            </span>
+                          ) : (
+                            <span className="orders__new-cust-meas-badge">
+                              {isExistingSelected ? 'Saved with this order' : 'New Customer Sizes'}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Garment-Specific Measurement Inputs Grid */}
+                        <div className="orders__item-meas-grid-labeled">
+                          {activeFields.map(f => (
+                            <div key={f.key} className="orders__item-meas-field-box">
+                              <label>{f.label} {f.unit ? `(${f.unit})` : ''}</label>
+                              <input
+                                type="text"
+                                placeholder={f.unit === 'text' ? 'Notes...' : 'e.g. 34'}
+                                value={activeItem.measurements?.[f.key] || ''}
+                                onChange={(e) => handleItemMeasurementChange(safeActiveIdx, f.key, e.target.value)}
+                              />
+                            </div>
+                          ))}
+
+                          {/* Custom Key-Value Body Parts Added to this Item */}
+                          {Object.keys(activeItem.measurements || {})
+                            .filter(k => !activeFields.some(f => f.key === k))
+                            .map(customKey => (
+                              <div key={customKey} className="orders__item-meas-field-box orders__custom-size-box">
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <label style={{ color: '#b45309', fontWeight: 700 }}>✨ {customKey}:</label>
+                                  <button
+                                    type="button"
+                                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '11px', padding: 0 }}
+                                    onClick={() => {
+                                      const copyMeas = { ...(activeItem.measurements || {}) };
+                                      delete copyMeas[customKey];
+                                      const updated = [...orderItems];
+                                      updated[safeActiveIdx].measurements = copyMeas;
+                                      setOrderItems(updated);
+                                    }}
+                                    title="Delete custom size"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
                                 <input
                                   type="text"
-                                  placeholder="e.g. 34"
-                                  value={item.measurements?.[f.key] || ''}
-                                  onChange={(e) => handleItemMeasurementChange(idx, f.key, e.target.value)}
+                                  placeholder="Size value..."
+                                  value={activeItem.measurements?.[customKey] || ''}
+                                  onChange={(e) => handleItemMeasurementChange(safeActiveIdx, customKey, e.target.value)}
                                 />
                               </div>
                             ))}
+                        </div>
 
-                            {/* Render Custom Key-Value Body Parts Added to this Item */}
-                            {Object.keys(item.measurements || {})
-                              .filter(k => !fields.some(f => f.key === k))
-                              .map(customKey => (
-                                <div key={customKey} className="orders__item-meas-field-box" style={{ background: '#fffbeb', borderColor: '#fde68a' }}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <label style={{ color: '#b45309', fontWeight: 700 }}>✨ {customKey} (Custom):</label>
-                                    <button
-                                      type="button"
-                                      style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '11px', padding: 0 }}
-                                      onClick={() => {
-                                        const copyMeas = { ...(item.measurements || {}) };
-                                        delete copyMeas[customKey];
-                                        const updated = [...orderItems];
-                                        updated[idx].measurements = copyMeas;
-                                        setOrderItems(updated);
-                                      }}
-                                    >
-                                      ✕
-                                    </button>
-                                  </div>
-                                  <input
-                                    type="text"
-                                    placeholder="Size value..."
-                                    value={item.measurements?.[customKey] || ''}
-                                    onChange={(e) => handleItemMeasurementChange(idx, customKey, e.target.value)}
-                                  />
-                                </div>
-                              ))}
-                          </div>
-
-                          {/* Inline Custom Measurement Adder for this Item */}
-                          <div className="orders__custom-measurement-adder" style={{ marginTop: '10px', background: '#f8fafc' }}>
-                            <span>+ Custom Measurement:</span>
-                            <input
-                              type="text"
-                              placeholder="Part (e.g. Wrist, Cross-Back)..."
-                              id={`new_custom_key_${idx}`}
-                              className="meas-part-input"
-                            />
-                            <input
-                              type="text"
-                              placeholder="Size (e.g. 14.5)"
-                              id={`new_custom_val_${idx}`}
-                              className="meas-size-input"
-                            />
+                        {/* Working "+ Add New Size" Feature */}
+                        <div className="orders__add-size-block">
+                          {!showAddNewSize ? (
                             <button
                               type="button"
-                              onClick={() => {
-                                const kEl = document.getElementById(`new_custom_key_${idx}`);
-                                const vEl = document.getElementById(`new_custom_val_${idx}`);
-                                if (kEl && kEl.value.trim()) {
-                                  handleItemMeasurementChange(idx, kEl.value.trim(), vEl ? vEl.value.trim() : '');
-                                  kEl.value = '';
-                                  if (vEl) vEl.value = '';
-                                }
-                              }}
+                              className="orders__add-new-size-btn"
+                              onClick={() => setShowAddNewSize(true)}
                             >
-                              + Add Size
+                              <Plus size={14} /> + Add New Size
                             </button>
-                          </div>
+                          ) : (
+                            <div className="orders__add-new-size-form animate-fade-in">
+                              <div className="orders__add-size-inputs">
+                                <input
+                                  type="text"
+                                  placeholder="Size Name (e.g. Wrist, Back Depth, Slit)..."
+                                  value={newSizeName}
+                                  onChange={(e) => setNewSizeName(e.target.value)}
+                                  autoFocus
+                                  className="orders__add-size-name-input"
+                                />
+                                <input
+                                  type="text"
+                                  placeholder="Value (e.g. 14 in)..."
+                                  value={newSizeVal}
+                                  onChange={(e) => setNewSizeVal(e.target.value)}
+                                  className="orders__add-size-val-input"
+                                />
+                              </div>
+                              <div className="orders__add-size-actions">
+                                <button
+                                  type="button"
+                                  className="modal__btn modal__btn--primary"
+                                  style={{ padding: '5px 14px', fontSize: '12px' }}
+                                  onClick={() => {
+                                    const cleanName = newSizeName.trim();
+                                    if (!cleanName) {
+                                      alert('Please enter a measurement name (e.g. Wrist, Slit)');
+                                      return;
+                                    }
+                                    handleItemMeasurementChange(safeActiveIdx, cleanName, newSizeVal.trim());
+                                    setNewSizeName('');
+                                    setNewSizeVal('');
+                                    setShowAddNewSize(false);
+                                  }}
+                                >
+                                  ✓ Save Size
+                                </button>
+                                <button
+                                  type="button"
+                                  className="modal__btn modal__btn--secondary"
+                                  style={{ padding: '5px 10px', fontSize: '12px' }}
+                                  onClick={() => {
+                                    setNewSizeName('');
+                                    setNewSizeVal('');
+                                    setShowAddNewSize(false);
+                                  }}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      );
-                    })()}
+                      </div>
+                    )}
                   </div>
-                ))}
+                );
+              })()}
+
+              {/* 2. Fabrics & Order Items Selection Area (Below Measurements & Sizes) */}
+              <div className="orders__fabrics-section">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: 'var(--color-navy-700)' }}>
+                    👗 Fabrics & Garments ({orderItems.length})
+                  </h4>
+                  <button type="button" className="orders__add-fabric-btn" onClick={handleAddItem}>
+                    <Plus size={13} /> + Add Fabric
+                  </button>
+                </div>
+
+                {orderItems.map((item, idx) => {
+                  const gConfig = getGarmentConfig(item.category);
+                  const availableSubtypes = gConfig.subtypes || [];
+                  const filledCount = Object.keys(item.measurements || {}).filter(k => String(item.measurements[k] || '').trim().length > 0).length;
+
+                  return (
+                    <div key={idx} className="orders__fabric-card">
+                      <div className="orders__fabric-row-top">
+                        {/* Garment Category Dropdown */}
+                        <select
+                          className="orders__fabric-select-cat"
+                          value={item.category}
+                          onChange={(e) => handleItemCategoryChange(idx, e.target.value)}
+                        >
+                          {GARMENT_CATEGORIES.map((cat) => (
+                            <option key={cat.value} value={cat.value}>{cat.label}</option>
+                          ))}
+                        </select>
+
+                        {/* Garment Subtype Dropdown */}
+                        {availableSubtypes.length > 0 && (
+                          <select
+                            className="orders__fabric-select-subtype"
+                            value={item.subtype || availableSubtypes[0]}
+                            onChange={(e) => handleItemSubtypeChange(idx, e.target.value)}
+                          >
+                            {availableSubtypes.map((sub) => (
+                              <option key={sub} value={sub}>{sub}</option>
+                            ))}
+                          </select>
+                        )}
+
+                        {/* Item Name / Fabric Description Input */}
+                        <input
+                          type="text"
+                          className="orders__fabric-desc-input"
+                          placeholder="Fabric / Garment Name (e.g. Cotton Suit)..."
+                          value={item.name}
+                          onChange={(e) => {
+                            const updated = [...orderItems];
+                            updated[idx].name = e.target.value;
+                            setOrderItems(updated);
+                          }}
+                          required
+                        />
+                      </div>
+
+                      <div className="orders__fabric-row-bottom">
+                        <div className="orders__fabric-num-field">
+                          <label>Qty:</label>
+                          <input
+                            type="number"
+                            min="1"
+                            style={{ width: '55px' }}
+                            value={item.qty}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => {
+                              const updated = [...orderItems];
+                              updated[idx].qty = parseInt(e.target.value) || 1;
+                              setOrderItems(updated);
+                            }}
+                          />
+                        </div>
+
+                        <div className="orders__fabric-num-field">
+                          <label>Rate (₹):</label>
+                          <input
+                            type="number"
+                            placeholder={item.category === 'other' ? 'Custom' : '0'}
+                            style={{ width: '85px' }}
+                            value={item.price === 0 ? '' : item.price}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => {
+                              const updated = [...orderItems];
+                              updated[idx].price = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                              setOrderItems(updated);
+                            }}
+                          />
+                        </div>
+
+                        <div className="orders__fabric-item-total">
+                          Total: <strong>₹{(item.qty * (item.price || 0)).toLocaleString('en-IN')}</strong>
+                        </div>
+
+                        <input
+                          type="text"
+                          className="orders__fabric-notes-input"
+                          placeholder="Fabric / stitching notes..."
+                          value={item.notes || ''}
+                          onChange={(e) => {
+                            const updated = [...orderItems];
+                            updated[idx].notes = e.target.value;
+                            setOrderItems(updated);
+                          }}
+                        />
+
+                        {orderItems.length > 1 && (
+                          <button
+                            type="button"
+                            className="orders__fabric-delete-btn"
+                            onClick={() => handleRemoveItem(idx)}
+                            title="Remove fabric"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Quick Jump to Measurements for this Garment */}
+                      <div className="orders__fabric-meas-summary">
+                        <button
+                          type="button"
+                          className="orders__fabric-meas-link"
+                          onClick={() => {
+                            setActiveMeasItemIdx(idx);
+                            setMeasExpanded(true);
+                          }}
+                        >
+                          <Ruler size={11} />
+                          {filledCount > 0 ? `${filledCount} sizes recorded` : 'No sizes entered yet'}
+                          <span style={{ textDecoration: 'underline', marginLeft: '4px' }}>
+                            (Tap to view/edit sizes)
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="modal__actions">
@@ -1942,116 +2197,108 @@ export default function Orders() {
                 </select>
               </div>
 
-              <div className="orders__bill-items-editor" style={{ marginBottom: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-navy-700)', margin: 0 }}>
-                    Garment Items & Pricing ({editItems.length}):
-                  </h4>
-                  <button
-                    type="button"
-                    style={{ background: 'var(--color-gold-500)', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 10px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    onClick={handleAddEditItem}
-                  >
-                    <Plus size={13} /> {language === 'hi' ? '+ नया कपड़ा जोड़ें' : '+ Add Garment / Item'}
-                  </button>
-                </div>
+              {/* 1. Collapsible Measurements & Sizes Section at the very top of Edit Modal */}
+              {(() => {
+                const safeEditIdx = Math.min(editActiveMeasIdx, Math.max(0, editItems.length - 1));
+                const activeEditItem = editItems[safeEditIdx] || editItems[0];
+                const activeCategoryConfig = getCategoryConfig(activeEditItem?.category);
+                const activeFields = activeCategoryConfig?.fields || [];
 
-                {editItems.map((item, idx) => {
-                  const categoryConfig = getCategoryConfig(item.category);
-                  const fields = categoryConfig?.fields || [];
+                const totalFilledCount = editItems.reduce((acc, it) => {
+                  return acc + Object.keys(it.measurements || {}).filter(k => String(it.measurements[k] || '').trim().length > 0).length;
+                }, 0);
 
-                  return (
-                    <div key={idx} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px', marginBottom: '10px' }}>
-                      <div className="orders__bill-item-row" style={{ marginBottom: '8px', gap: '6px' }}>
-                        <select
-                          value={item.category || 'topWear'}
-                          style={{ padding: '6px', fontSize: '12px', borderRadius: '4px', border: '1px solid #cbd5e1', width: '130px' }}
-                          onChange={(e) => handleEditItemChange(idx, 'category', e.target.value)}
-                        >
-                          {GARMENT_CATEGORIES.map((cat) => (
-                            <option key={cat.value} value={cat.value}>{cat.label}</option>
-                          ))}
-                        </select>
-
-                        <input
-                          type="text"
-                          value={item.name}
-                          style={{ flex: 1, padding: '6px 10px', fontSize: '13px' }}
-                          onChange={(e) => handleEditItemChange(idx, 'name', e.target.value)}
-                          placeholder="Garment Name (e.g. Designer Blouse)..."
-                        />
-
-                        <div className="orders__bill-item-inputs" style={{ gap: '4px' }}>
-                          <label style={{ fontSize: '11px' }}>Qty:</label>
-                          <input
-                            type="number"
-                            min="1"
-                            style={{ width: '50px' }}
-                            value={item.qty}
-                            onFocus={(e) => e.target.select()}
-                            onChange={(e) => handleEditItemChange(idx, 'qty', Number(e.target.value) || 1)}
-                          />
-                          <label style={{ fontSize: '11px' }}>Rate (₹):</label>
-                          <input
-                            type="number"
-                            style={{ width: '80px' }}
-                            value={item.price === 0 ? '' : item.price}
-                            placeholder="0"
-                            onFocus={(e) => e.target.select()}
-                            onChange={(e) => handleEditItemChange(idx, 'price', e.target.value === '' ? 0 : Number(e.target.value))}
-                          />
-                          {editItems.length > 1 && (
-                            <button
-                              type="button"
-                              style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', width: '24px', height: '28px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginLeft: '4px' }}
-                              onClick={() => handleRemoveEditItem(idx)}
-                              title="Remove item"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
+                return (
+                  <div className="orders__measurements-section" style={{ marginBottom: '14px' }}>
+                    <div
+                      className="orders__measurements-header"
+                      onClick={() => setEditMeasExpanded(!editMeasExpanded)}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <div className="orders__meas-title-wrap">
+                        <Ruler size={16} className="orders__meas-icon" />
+                        <span>Measurements & Sizes</span>
+                        <span className="orders__meas-meta-badge">
+                          {totalFilledCount > 0
+                            ? `${totalFilledCount} size${totalFilledCount > 1 ? 's' : ''} entered`
+                            : (editMeasExpanded ? 'Enter body sizes' : 'Tap to expand')}
+                        </span>
                       </div>
+                      <div className="orders__meas-header-right">
+                        <span className="orders__meas-toggle-hint">
+                          {editMeasExpanded ? 'Collapse' : 'Expand'}
+                        </span>
+                        {editMeasExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                      </div>
+                    </div>
 
-                      {/* Item Measurements Grid */}
-                      <div className="orders__item-meas-container" style={{ margin: 0, padding: '8px', background: '#f8fafc' }}>
-                        <div className="orders__item-meas-header" style={{ marginBottom: '6px' }}>
-                          <span>
-                            <Ruler size={12} /> {categoryConfig?.label || item.category} Sizes:
+                    {editMeasExpanded && (
+                      <div className="orders__measurements-body animate-fade-in">
+                        {/* Garment Tabs when multiple order items exist */}
+                        {editItems.length > 1 && (
+                          <div className="orders__meas-tabs-wrapper">
+                            <span className="orders__meas-tabs-label">Select garment to edit sizes:</span>
+                            <div className="orders__meas-garment-tabs">
+                              {editItems.map((it, idx) => {
+                                const itCat = getGarmentConfig(it.category);
+                                const itFilled = Object.keys(it.measurements || {}).filter(k => String(it.measurements[k] || '').trim().length > 0).length;
+                                return (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    className={`orders__meas-tab-btn ${safeEditIdx === idx ? 'active' : ''}`}
+                                    onClick={() => setEditActiveMeasIdx(idx)}
+                                  >
+                                    #{idx + 1} {itCat.shortLabel || it.name}
+                                    {it.subtype ? ` (${it.subtype})` : ''}
+                                    {itFilled > 0 && <span className="orders__tab-meas-pill">{itFilled}</span>}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="orders__active-meas-info">
+                          <span className="orders__active-meas-title">
+                            {activeCategoryConfig?.label || activeEditItem?.name} Sizes • {editingOrder.customerName}
                           </span>
                         </div>
 
+                        {/* Garment-Specific Measurement Inputs Grid */}
                         <div className="orders__item-meas-grid-labeled">
-                          {fields.map(f => (
+                          {activeFields.map(f => (
                             <div key={f.key} className="orders__item-meas-field-box">
-                              <label>{f.label} ({f.unit})</label>
+                              <label>{f.label} {f.unit ? `(${f.unit})` : ''}</label>
                               <input
                                 type="text"
-                                placeholder="e.g. 34"
-                                value={item.measurements?.[f.key] || ''}
+                                placeholder={f.unit === 'text' ? 'Notes...' : 'e.g. 34'}
+                                value={activeEditItem?.measurements?.[f.key] || ''}
                                 onChange={(e) => {
-                                  const copyMeas = { ...(item.measurements || {}), [f.key]: e.target.value };
-                                  handleEditItemChange(idx, 'measurements', copyMeas);
+                                  const copyMeas = { ...(activeEditItem?.measurements || {}), [f.key]: e.target.value };
+                                  handleEditItemChange(safeEditIdx, 'measurements', copyMeas);
                                 }}
                               />
                             </div>
                           ))}
 
                           {/* Custom Key-Value Sizes Added to this Item */}
-                          {Object.keys(item.measurements || {})
-                            .filter(k => !fields.some(f => f.key === k))
+                          {Object.keys(activeEditItem?.measurements || {})
+                            .filter(k => !activeFields.some(f => f.key === k))
                             .map(customKey => (
-                              <div key={customKey} className="orders__item-meas-field-box" style={{ background: '#fffbeb', borderColor: '#fde68a' }}>
+                              <div key={customKey} className="orders__item-meas-field-box orders__custom-size-box">
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                   <label style={{ color: '#b45309', fontWeight: 700 }}>✨ {customKey}:</label>
                                   <button
                                     type="button"
                                     style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '11px', padding: 0 }}
                                     onClick={() => {
-                                      const copyMeas = { ...(item.measurements || {}) };
+                                      const copyMeas = { ...(activeEditItem?.measurements || {}) };
                                       delete copyMeas[customKey];
-                                      handleEditItemChange(idx, 'measurements', copyMeas);
+                                      handleEditItemChange(safeEditIdx, 'measurements', copyMeas);
                                     }}
+                                    title="Delete custom size"
                                   >
                                     ✕
                                   </button>
@@ -2059,47 +2306,207 @@ export default function Orders() {
                                 <input
                                   type="text"
                                   placeholder="Size..."
-                                  value={item.measurements?.[customKey] || ''}
+                                  value={activeEditItem?.measurements?.[customKey] || ''}
                                   onChange={(e) => {
-                                    const copyMeas = { ...(item.measurements || {}), [customKey]: e.target.value };
-                                    handleEditItemChange(idx, 'measurements', copyMeas);
+                                    const copyMeas = { ...(activeEditItem?.measurements || {}), [customKey]: e.target.value };
+                                    handleEditItemChange(safeEditIdx, 'measurements', copyMeas);
                                   }}
                                 />
                               </div>
                             ))}
                         </div>
 
-                        {/* Inline Custom Measurement Key Adder */}
-                        <div className="orders__custom-measurement-adder" style={{ marginTop: '8px', background: '#ffffff' }}>
-                          <span>+ Custom Measurement:</span>
+                        {/* Working "+ Add New Size" Feature */}
+                        <div className="orders__add-size-block">
+                          {!editShowAddNewSize ? (
+                            <button
+                              type="button"
+                              className="orders__add-new-size-btn"
+                              onClick={() => setEditShowAddNewSize(true)}
+                            >
+                              <Plus size={14} /> + Add New Size
+                            </button>
+                          ) : (
+                            <div className="orders__add-new-size-form animate-fade-in">
+                              <div className="orders__add-size-inputs">
+                                <input
+                                  type="text"
+                                  placeholder="Size Name (e.g. Wrist, Back Depth, Slit)..."
+                                  value={editNewSizeName}
+                                  onChange={(e) => setEditNewSizeName(e.target.value)}
+                                  autoFocus
+                                  className="orders__add-size-name-input"
+                                />
+                                <input
+                                  type="text"
+                                  placeholder="Value (e.g. 14 in)..."
+                                  value={editNewSizeVal}
+                                  onChange={(e) => setEditNewSizeVal(e.target.value)}
+                                  className="orders__add-size-val-input"
+                                />
+                              </div>
+                              <div className="orders__add-size-actions">
+                                <button
+                                  type="button"
+                                  className="modal__btn modal__btn--primary"
+                                  style={{ padding: '5px 14px', fontSize: '12px' }}
+                                  onClick={() => {
+                                    const cleanName = editNewSizeName.trim();
+                                    if (!cleanName) {
+                                      alert('Please enter a measurement name (e.g. Wrist, Slit)');
+                                      return;
+                                    }
+                                    const copyMeas = { ...(activeEditItem?.measurements || {}), [cleanName]: editNewSizeVal.trim() };
+                                    handleEditItemChange(safeEditIdx, 'measurements', copyMeas);
+                                    setEditNewSizeName('');
+                                    setEditNewSizeVal('');
+                                    setEditShowAddNewSize(false);
+                                  }}
+                                >
+                                  ✓ Save Size
+                                </button>
+                                <button
+                                  type="button"
+                                  className="modal__btn modal__btn--secondary"
+                                  style={{ padding: '5px 10px', fontSize: '12px' }}
+                                  onClick={() => {
+                                    setEditNewSizeName('');
+                                    setEditNewSizeVal('');
+                                    setEditShowAddNewSize(false);
+                                  }}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* 2. Fabrics & Garments Section (Below Measurements & Sizes) */}
+              <div className="orders__fabrics-section" style={{ marginBottom: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-navy-700)', margin: 0 }}>
+                    👗 Garments & Fabrics ({editItems.length}):
+                  </h4>
+                  <button
+                    type="button"
+                    className="orders__add-fabric-btn"
+                    onClick={handleAddEditItem}
+                  >
+                    <Plus size={13} /> {language === 'hi' ? '+ नया कपड़ा जोड़ें' : '+ Add Fabric'}
+                  </button>
+                </div>
+
+                {editItems.map((item, idx) => {
+                  const gConfig = getGarmentConfig(item.category);
+                  const availableSubtypes = gConfig.subtypes || [];
+                  const filledCount = Object.keys(item.measurements || {}).filter(k => String(item.measurements[k] || '').trim().length > 0).length;
+
+                  return (
+                    <div key={idx} className="orders__fabric-card">
+                      <div className="orders__fabric-row-top">
+                        <select
+                          className="orders__fabric-select-cat"
+                          value={item.category || 'suit'}
+                          onChange={(e) => handleEditItemCategoryChange(idx, e.target.value)}
+                        >
+                          {GARMENT_CATEGORIES.map((cat) => (
+                            <option key={cat.value} value={cat.value}>{cat.label}</option>
+                          ))}
+                        </select>
+
+                        {availableSubtypes.length > 0 && (
+                          <select
+                            className="orders__fabric-select-subtype"
+                            value={item.subtype || availableSubtypes[0]}
+                            onChange={(e) => handleEditItemSubtypeChange(idx, e.target.value)}
+                          >
+                            {availableSubtypes.map((sub) => (
+                              <option key={sub} value={sub}>{sub}</option>
+                            ))}
+                          </select>
+                        )}
+
+                        <input
+                          type="text"
+                          className="orders__fabric-desc-input"
+                          value={item.name}
+                          onChange={(e) => handleEditItemChange(idx, 'name', e.target.value)}
+                          placeholder="Garment / Fabric Description..."
+                          required
+                        />
+                      </div>
+
+                      <div className="orders__fabric-row-bottom">
+                        <div className="orders__fabric-num-field">
+                          <label>Qty:</label>
                           <input
-                            type="text"
-                            placeholder="Part (e.g. Wrist, Depth)..."
-                            id={`edit_custom_key_${idx}`}
-                            className="meas-part-input"
+                            type="number"
+                            min="1"
+                            style={{ width: '55px' }}
+                            value={item.qty}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => handleEditItemChange(idx, 'qty', Number(e.target.value) || 1)}
                           />
+                        </div>
+
+                        <div className="orders__fabric-num-field">
+                          <label>Rate (₹):</label>
                           <input
-                            type="text"
-                            placeholder="Size (e.g. 14.5)"
-                            id={`edit_custom_val_${idx}`}
-                            className="meas-size-input"
+                            type="number"
+                            style={{ width: '85px' }}
+                            value={item.price === 0 ? '' : item.price}
+                            placeholder={item.category === 'other' ? 'Custom' : '0'}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => handleEditItemChange(idx, 'price', e.target.value === '' ? 0 : Number(e.target.value))}
                           />
+                        </div>
+
+                        <div className="orders__fabric-item-total">
+                          Total: <strong>₹{((Number(item.qty) || 1) * (Number(item.price) || 0)).toLocaleString('en-IN')}</strong>
+                        </div>
+
+                        <input
+                          type="text"
+                          className="orders__fabric-notes-input"
+                          placeholder="Stitching notes..."
+                          value={item.notes || ''}
+                          onChange={(e) => handleEditItemChange(idx, 'notes', e.target.value)}
+                        />
+
+                        {editItems.length > 1 && (
                           <button
                             type="button"
-                            onClick={() => {
-                              const kEl = document.getElementById(`edit_custom_key_${idx}`);
-                              const vEl = document.getElementById(`edit_custom_val_${idx}`);
-                              if (kEl && kEl.value.trim()) {
-                                const copyMeas = { ...(item.measurements || {}), [kEl.value.trim()]: vEl ? vEl.value.trim() : '' };
-                                handleEditItemChange(idx, 'measurements', copyMeas);
-                                kEl.value = '';
-                                if (vEl) vEl.value = '';
-                              }
-                            }}
+                            className="orders__fabric-delete-btn"
+                            onClick={() => handleRemoveEditItem(idx)}
+                            title="Remove item"
                           >
-                            + Add Size
+                            ✕
                           </button>
-                        </div>
+                        )}
+                      </div>
+
+                      {/* Quick Jump to Measurements for this Garment */}
+                      <div className="orders__fabric-meas-summary">
+                        <button
+                          type="button"
+                          className="orders__fabric-meas-link"
+                          onClick={() => {
+                            setEditActiveMeasIdx(idx);
+                            setEditMeasExpanded(true);
+                          }}
+                        >
+                          <Ruler size={11} />
+                          {filledCount > 0 ? `${filledCount} sizes recorded` : 'No sizes entered yet'}
+                          <span style={{ textDecoration: 'underline', marginLeft: '4px' }}>
+                            (Tap to view/edit sizes)
+                          </span>
+                        </button>
                       </div>
                     </div>
                   );
