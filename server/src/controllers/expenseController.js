@@ -9,7 +9,7 @@ export const getExpenses = async (req, res) => {
     if (date) query.date = date;
     if (type && type !== 'all') query.type = type;
 
-    const expenses = await Expense.find(query).sort({ date: -1 });
+    const expenses = await Expense.find(query).sort({ date: -1 }).lean();
     res.json({ success: true, count: expenses.length, data: expenses });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

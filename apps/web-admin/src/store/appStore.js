@@ -3,13 +3,39 @@ import { generateOrders, generateExpenses, generateDashboardData } from '../data
 import useCustomerStore from './customerStore';
 import { api } from '../services/apiClient';
 
-const initialOrders = [];
-const initialExpenses = [];
+const CACHE_KEYS = {
+  ORDERS: 'darji_cache_orders',
+  EXPENSES: 'darji_cache_expenses',
+};
+
+const loadCachedData = (key, fallback = []) => {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch (e) {
+    return fallback;
+  }
+};
+
+const saveCachedData = (key, data) => {
+  try {
+    if (Array.isArray(data)) {
+      localStorage.setItem(key, JSON.stringify(data));
+    }
+  } catch (e) {
+    console.warn(`[Local Cache Save Warning] ${key}:`, e.message);
+  }
+};
+
+const initialOrders = loadCachedData(CACHE_KEYS.ORDERS, []);
+const initialExpenses = loadCachedData(CACHE_KEYS.EXPENSES, []);
 
 const useAppStore = create((set, get) => ({
   orders: initialOrders,
   expenses: initialExpenses,
-  dashboardData: generateDashboardData([], []),
+  dashboardData: generateDashboardData(initialOrders, initialExpenses),
   notifications: [],
   sidebarCollapsed: false,
 
@@ -17,7 +43,8 @@ const useAppStore = create((set, get) => ({
   fetchOrdersFromDB: async () => {
     try {
       const res = await api.getOrders();
-      if (res.success && Array.isArray(res.data)) {
+      if (res && res.success && Array.isArray(res.data)) {
+        saveCachedData(CACHE_KEYS.ORDERS, res.data);
         set((state) => ({
           orders: res.data,
           dashboardData: generateDashboardData(res.data, state.expenses),
@@ -31,7 +58,8 @@ const useAppStore = create((set, get) => ({
   fetchExpensesFromDB: async () => {
     try {
       const res = await api.getExpenses();
-      if (res.success && Array.isArray(res.data)) {
+      if (res && res.success && Array.isArray(res.data)) {
+        saveCachedData(CACHE_KEYS.EXPENSES, res.data);
         set((state) => ({
           expenses: res.data,
           dashboardData: generateDashboardData(state.orders, res.data),
@@ -77,6 +105,7 @@ const useAppStore = create((set, get) => ({
           // Remove any duplicate if temporary ID matched, and prepend newly saved MongoDB order
           const filtered = state.orders.filter(o => o._id !== savedOrder._id && o.orderNumber !== savedOrder.orderNumber);
           const updatedOrders = [savedOrder, ...filtered];
+          saveCachedData(CACHE_KEYS.ORDERS, updatedOrders);
           return {
             orders: updatedOrders,
             dashboardData: generateDashboardData(updatedOrders, state.expenses),
@@ -134,6 +163,7 @@ const useAppStore = create((set, get) => ({
       });
 
       const newNotifications = waNotification ? [waNotification, ...state.notifications] : state.notifications;
+      saveCachedData(CACHE_KEYS.ORDERS, updatedOrders);
 
       return {
         orders: updatedOrders,
@@ -188,6 +218,7 @@ const useAppStore = create((set, get) => ({
         return o;
       });
 
+      saveCachedData(CACHE_KEYS.ORDERS, updatedOrders);
       return {
         orders: updatedOrders,
         dashboardData: generateDashboardData(updatedOrders, state.expenses),
@@ -202,6 +233,7 @@ const useAppStore = create((set, get) => ({
           const updatedOrders = state.orders.map((o) =>
             (o._id === targetId || o.orderNumber === targetId || o._id === res.data._id) ? res.data : o
           );
+          saveCachedData(CACHE_KEYS.ORDERS, updatedOrders);
           return {
             orders: updatedOrders,
             dashboardData: generateDashboardData(updatedOrders, state.expenses),
@@ -247,6 +279,7 @@ const useAppStore = create((set, get) => ({
         return o;
       });
 
+      saveCachedData(CACHE_KEYS.ORDERS, updatedOrders);
       return {
         orders: updatedOrders,
         dashboardData: generateDashboardData(updatedOrders, state.expenses),
@@ -262,6 +295,7 @@ const useAppStore = create((set, get) => ({
           const updatedOrders = state.orders.map((o) =>
             (o._id === targetId || o.orderNumber === targetId || o._id === res.data._id) ? res.data : o
           );
+          saveCachedData(CACHE_KEYS.ORDERS, updatedOrders);
           return {
             orders: updatedOrders,
             dashboardData: generateDashboardData(updatedOrders, state.expenses),
@@ -327,6 +361,7 @@ const useAppStore = create((set, get) => ({
         return o;
       });
 
+      saveCachedData(CACHE_KEYS.ORDERS, updatedOrders);
       return {
         orders: updatedOrders,
         dashboardData: generateDashboardData(updatedOrders, state.expenses),
@@ -338,6 +373,7 @@ const useAppStore = create((set, get) => ({
       if (res && res.success && res.data) {
         set((state) => {
           const syncedOrders = state.orders.map(o => (o._id === res.data._id || o.orderNumber === res.data.orderNumber) ? res.data : o);
+          saveCachedData(CACHE_KEYS.ORDERS, syncedOrders);
           return {
             orders: syncedOrders,
             dashboardData: generateDashboardData(syncedOrders, state.expenses),
@@ -355,6 +391,7 @@ const useAppStore = create((set, get) => ({
       if (res && res.success && res.data) {
         set((state) => {
           const updatedOrders = state.orders.map(o => (o._id === res.data._id || o.orderNumber === res.data.orderNumber) ? res.data : o);
+          saveCachedData(CACHE_KEYS.ORDERS, updatedOrders);
           return {
             orders: updatedOrders,
             dashboardData: generateDashboardData(updatedOrders, state.expenses),
@@ -374,6 +411,7 @@ const useAppStore = create((set, get) => ({
       if (res && res.success && res.data) {
         set((state) => {
           const updatedOrders = state.orders.map(o => (o._id === res.data._id || o.orderNumber === res.data.orderNumber) ? res.data : o);
+          saveCachedData(CACHE_KEYS.ORDERS, updatedOrders);
           return {
             orders: updatedOrders,
             dashboardData: generateDashboardData(updatedOrders, state.expenses),
@@ -393,6 +431,7 @@ const useAppStore = create((set, get) => ({
       if (res && res.success && res.data) {
         set((state) => {
           const updatedOrders = state.orders.map(o => (o._id === res.data._id || o.orderNumber === res.data.orderNumber) ? res.data : o);
+          saveCachedData(CACHE_KEYS.ORDERS, updatedOrders);
           return {
             orders: updatedOrders,
             dashboardData: generateDashboardData(updatedOrders, state.expenses),
@@ -414,6 +453,7 @@ const useAppStore = create((set, get) => ({
       const updatedOrders = state.orders.filter(
         (o) => o._id !== targetId && o.orderNumber !== targetId && o._id !== orderId
       );
+      saveCachedData(CACHE_KEYS.ORDERS, updatedOrders);
       return {
         orders: updatedOrders,
         dashboardData: generateDashboardData(updatedOrders, state.expenses),
@@ -437,6 +477,7 @@ const useAppStore = create((set, get) => ({
       if (res.success && res.data) {
         set((state) => {
           const updated = [res.data, ...state.expenses];
+          saveCachedData(CACHE_KEYS.EXPENSES, updated);
           return {
             expenses: updated,
             dashboardData: generateDashboardData(state.orders, updated),
@@ -456,6 +497,7 @@ const useAppStore = create((set, get) => ({
     };
     set((state) => {
       const updated = [entry, ...state.expenses];
+      saveCachedData(CACHE_KEYS.EXPENSES, updated);
       return {
         expenses: updated,
         dashboardData: generateDashboardData(state.orders, updated),
@@ -473,6 +515,7 @@ const useAppStore = create((set, get) => ({
 
     set((state) => {
       const updated = state.expenses.filter(e => e._id !== expenseId);
+      saveCachedData(CACHE_KEYS.EXPENSES, updated);
       return {
         expenses: updated,
         dashboardData: generateDashboardData(state.orders, updated),

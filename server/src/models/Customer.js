@@ -22,4 +22,10 @@ const customerSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// High-performance query indexes
+customerSchema.index({ shopId: 1, isDeleted: 1, updatedAt: -1 });
+customerSchema.index({ mobile: 1 });
+customerSchema.index({ name: 1 });
+
 export default mongoose.model('Customer', customerSchema);
+

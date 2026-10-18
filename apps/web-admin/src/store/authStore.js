@@ -145,16 +145,20 @@ const useAuthStore = create((set) => ({
   logout: () => {
     localStorage.removeItem('darji_user');
     localStorage.removeItem('darji_token');
+    localStorage.removeItem('darji_cache_orders');
+    localStorage.removeItem('darji_cache_customers');
+    localStorage.removeItem('darji_cache_expenses');
     set({ user: null, isAuthenticated: false });
   },
 
   restoreSession: () => {
     const stored = localStorage.getItem('darji_user');
+    const token = localStorage.getItem('darji_token');
     if (stored) {
       try {
         const user = JSON.parse(stored);
         const digits = String(user?.phone || '').replace(/\D/g, '').slice(-10);
-        if (digits !== '9479487828') {
+        if (digits !== '9479487828' || !token) {
           localStorage.removeItem('darji_user');
           localStorage.removeItem('darji_token');
           set({ user: null, isAuthenticated: false });

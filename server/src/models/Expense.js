@@ -26,4 +26,8 @@ const expenseSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// High-performance query index
+expenseSchema.index({ shopId: 1, isDeleted: 1, date: -1 });
+
 export default mongoose.model('Expense', expenseSchema);
+

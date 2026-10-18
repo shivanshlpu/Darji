@@ -2,7 +2,30 @@ import { create } from 'zustand';
 import { generateCustomers } from '../data/mockData';
 import { api } from '../services/apiClient';
 
-const initialCustomers = [];
+const CACHE_KEY_CUSTOMERS = 'darji_cache_customers';
+
+const loadCachedCustomers = () => {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY_CUSTOMERS);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+const saveCachedCustomers = (data) => {
+  try {
+    if (Array.isArray(data)) {
+      localStorage.setItem(CACHE_KEY_CUSTOMERS, JSON.stringify(data));
+    }
+  } catch (e) {
+    console.warn('[Local Cache Save Warning] customers:', e.message);
+  }
+};
+
+const initialCustomers = loadCachedCustomers();
 
 const useCustomerStore = create((set, get) => ({
   customers: initialCustomers,
@@ -16,8 +39,9 @@ const useCustomerStore = create((set, get) => ({
   fetchCustomersFromDB: async () => {
     try {
       const res = await api.getCustomers();
-      if (res.success) {
-        set({ customers: res.data || [] });
+      if (res && res.success && Array.isArray(res.data)) {
+        saveCachedCustomers(res.data);
+        set({ customers: res.data });
       }
     } catch (err) {
       console.warn('Customer store fetch warning:', err.message);
@@ -78,9 +102,13 @@ const useCustomerStore = create((set, get) => ({
   addCustomer: async (customer) => {
     try {
       const res = await api.createCustomer(customer);
-      if (res.success) {
-        set(state => ({ customers: [res.data, ...state.customers] }));
-        return;
+      if (res.success && res.data) {
+        set(state => {
+          const updated = [res.data, ...state.customers.filter(c => c._id !== res.data._id)];
+          saveCachedCustomers(updated);
+          return { customers: updated };
+        });
+        return res.data;
       }
     } catch (err) {
       console.warn('API addCustomer fallback:', err.message);
@@ -97,7 +125,12 @@ const useCustomerStore = create((set, get) => ({
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    set(state => ({ customers: [newCust, ...state.customers] }));
+    set(state => {
+      const updated = [newCust, ...state.customers];
+      saveCachedCustomers(updated);
+      return { customers: updated };
+    });
+    return newCust;
   },
 
   updateCustomer: async (id, updates) => {
@@ -106,15 +139,19 @@ const useCustomerStore = create((set, get) => ({
     } catch (err) {
       console.warn('API updateCustomer fallback:', err.message);
     }
-    set(state => ({
-      customers: state.customers.map(c => c._id === id ? { ...c, ...updates } : c),
-    }));
+    set(state => {
+      const updated = state.customers.map(c => c._id === id ? { ...c, ...updates } : c);
+      saveCachedCustomers(updated);
+      return { customers: updated };
+    });
   },
 
   deleteCustomer: async (id) => {
-    set(state => ({
-      customers: state.customers.filter(c => c._id !== id && String(c._id) !== String(id)),
-    }));
+    set(state => {
+      const updated = state.customers.filter(c => c._id !== id && String(c._id) !== String(id));
+      saveCachedCustomers(updated);
+      return { customers: updated };
+    });
     try {
       await api.deleteCustomer(id);
     } catch (err) {
@@ -126,9 +163,11 @@ const useCustomerStore = create((set, get) => ({
   deleteCustomers: async (ids) => {
     if (!Array.isArray(ids) || ids.length === 0) return;
     const idSet = new Set(ids.map(i => String(i)));
-    set(state => ({
-      customers: state.customers.filter(c => !idSet.has(String(c._id))),
-    }));
+    set(state => {
+      const updated = state.customers.filter(c => !idSet.has(String(c._id)));
+      saveCachedCustomers(updated);
+      return { customers: updated };
+    });
     try {
       await api.bulkDeleteCustomers(ids);
     } catch (err) {

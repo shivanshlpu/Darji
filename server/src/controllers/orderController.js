@@ -70,7 +70,10 @@ export const getOrders = async (req, res) => {
     if (paymentStatus && paymentStatus !== 'all') query.paymentStatus = paymentStatus;
     if (customerId) query.customerId = customerId;
 
-    const orders = await Order.find(query).populate('customerId').sort({ createdAt: -1 });
+    const orders = await Order.find(query)
+      .populate('customerId', 'name mobile phone address')
+      .sort({ createdAt: -1 })
+      .lean();
     res.json({ success: true, count: orders.length, data: orders });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

@@ -39,15 +39,20 @@ export const getCustomers = async (req, res) => {
       .select('customerId customerName subtotal grandTotal totalAmount paidAmount advancePaid pendingAmount balanceDue createdAt orderDate')
       .lean();
 
+    // Fast O(1) lookup maps
+    const idToCust = new Map();
+    const nameToCust = new Map();
+    for (const c of customers) {
+      idToCust.set(c._id.toString(), c);
+      if (c.name) nameToCust.set(c.name.trim().toLowerCase(), c);
+    }
+
     const customerOrderMap = new Map();
     for (const ord of orders) {
       const cIdStr = ord.customerId ? ord.customerId.toString() : '';
       const cName = ord.customerName ? ord.customerName.trim().toLowerCase() : '';
 
-      const matchedCust = customers.find(c =>
-        (cIdStr && c._id.toString() === cIdStr) ||
-        (cName && c.name && c.name.trim().toLowerCase() === cName)
-      );
+      const matchedCust = (cIdStr ? idToCust.get(cIdStr) : null) || (cName ? nameToCust.get(cName) : null);
       if (!matchedCust) continue;
 
       const key = matchedCust._id.toString();
