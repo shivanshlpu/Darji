@@ -56,6 +56,7 @@ export const api = {
   updateOrder: (id, data) => request(`/orders/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteOrder: (id) => request(`/orders/${id}`, { method: 'DELETE' }),
   markOrderAsPaid: (id, data = {}) => request(`/orders/${id}/mark-paid`, { method: 'POST', body: JSON.stringify(data) }),
+  markOrderAsUnpaid: (id, data = {}) => request(`/orders/${id}/mark-unpaid`, { method: 'POST', body: JSON.stringify(data) }),
   updateOrderStatus: (id, newStatus) => request(`/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ newStatus }) }),
   migrateOrderPayments: () => request('/orders/migrate-payments', { method: 'POST' }),
 

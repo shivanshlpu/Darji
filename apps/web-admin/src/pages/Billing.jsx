@@ -19,7 +19,7 @@ const formatINR = (a) => new Intl.NumberFormat('en-IN', { style: 'currency', cur
 const DRAFT_STORAGE_KEY = 'darji_direct_bill_draft';
 
 export default function Billing() {
-  const { orders, addOrder, deleteOrder, markOrderPaid, updateOrderBill, fetchOrdersFromDB } = useAppStore();
+  const { orders, addOrder, deleteOrder, markOrderPaid, markOrderUnpaid, updateOrderBill, fetchOrdersFromDB } = useAppStore();
   const { customers, addCustomer, fetchCustomersFromDB } = useCustomerStore();
   const { shopInfo } = useSettingsStore();
   const { t, language } = useLanguageStore();
@@ -565,6 +565,21 @@ export default function Billing() {
                 <div className="billing__actions-left">
                   <span className="billing__inv-num">{activeInvoice.invoiceNumber}</span>
                   <span className="billing__token-pill"><Tag size={12} /> Token #{activeInvoice.tokenNumber}</span>
+                  <span
+                    className={`billing__payment-badge billing__payment-badge--${activeInvoice.remaining <= 0 ? 'paid' : 'unpaid'}`}
+                    style={{
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      background: activeInvoice.remaining <= 0 ? '#dcfce7' : '#ffedd5',
+                      color: activeInvoice.remaining <= 0 ? '#15803d' : '#c2410c',
+                      border: `1px solid ${activeInvoice.remaining <= 0 ? '#86efac' : '#fdba74'}`
+                    }}
+                  >
+                    {activeInvoice.remaining <= 0 ? '✓ Paid' : `⏳ Unpaid (₹${activeInvoice.remaining.toLocaleString('en-IN')})`}
+                  </span>
                 </div>
                 <div className="billing__actions-right">
                   <button
@@ -642,13 +657,35 @@ export default function Billing() {
                     <Share2 size={13} /> {isSendingPdf ? 'Sending...' : 'Send WhatsApp PDF'}
                   </button>
 
+                  {/* Mark Unpaid button */}
+                  {(activeInvoice.paid > 0 || activeInvoice.paymentStatus === 'paid' || activeInvoice.remaining <= 0) && (
+                    <button
+                      type="button"
+                      className="billing__action-btn billing__action-btn--unpaid"
+                      style={{ background: '#fff7ed', color: '#c2410c', borderColor: '#fdba74' }}
+                      onClick={async () => {
+                        const targetId = activeInvoice.orderId || selectedInvoiceOrder;
+                        if (targetId) {
+                          await markOrderUnpaid(targetId);
+                          setPdfMsg({ success: true, text: '⚠️ Invoice marked as UNPAID! It is now listed in Pending Payments on Dashboard.' });
+                          setTimeout(() => setPdfMsg(null), 4000);
+                        }
+                      }}
+                      title="Mark this bill as Unpaid so it appears in Pending Payments list"
+                    >
+                      <RotateCcw size={13} /> Mark Unpaid
+                    </button>
+                  )}
+
+                  {/* Mark Paid button */}
                   {activeInvoice.remaining > 0 && (
                     <button
                       type="button"
                       className="billing__action-btn billing__action-btn--paid"
                       onClick={() => {
-                        if (activeInvoice.orderId) {
-                          markOrderPaid(activeInvoice.orderId, {
+                        const targetId = activeInvoice.orderId || selectedInvoiceOrder;
+                        if (targetId) {
+                          markOrderPaid(targetId, {
                             paymentDate: new Date().toISOString(),
                             mode: 'cash',
                             notes: 'Marked paid from invoice preview',
@@ -778,6 +815,70 @@ export default function Billing() {
                     onChange={(e) => setExtraCharges(e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                     min="0"
                   />
+                </div>
+
+                <div className="billing__mod-field">
+                  <label>Payment Status</label>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      type="button"
+                      style={{
+                        flex: 1,
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        border: '1px solid',
+                        background: activeInvoice.remaining <= 0 ? '#16a34a' : '#f0fdf4',
+                        color: activeInvoice.remaining <= 0 ? '#ffffff' : '#15803d',
+                        borderColor: '#86efac',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onClick={() => {
+                        const targetId = activeInvoice.orderId || selectedInvoiceOrder;
+                        if (targetId) {
+                          markOrderPaid(targetId, {
+                            paymentDate: new Date().toISOString(),
+                            mode: 'cash',
+                            notes: 'Marked paid from bill modifiers',
+                          });
+                          setPdfMsg({ success: true, text: '✅ Invoice marked as PAID with today\'s date!' });
+                          setTimeout(() => setPdfMsg(null), 3000);
+                        }
+                      }}
+                      title="Mark as Full Paid"
+                    >
+                      ✓ Paid
+                    </button>
+                    <button
+                      type="button"
+                      style={{
+                        flex: 1,
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        border: '1px solid',
+                        background: activeInvoice.remaining > 0 ? '#ea580c' : '#fff7ed',
+                        color: activeInvoice.remaining > 0 ? '#ffffff' : '#c2410c',
+                        borderColor: '#fdba74',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onClick={async () => {
+                        const targetId = activeInvoice.orderId || selectedInvoiceOrder;
+                        if (targetId) {
+                          await markOrderUnpaid(targetId);
+                          setPdfMsg({ success: true, text: '⚠️ Invoice marked as UNPAID! It is now listed in Pending Payments on Dashboard.' });
+                          setTimeout(() => setPdfMsg(null), 4000);
+                        }
+                      }}
+                      title="Mark as Unpaid (moves to Pending Payments list on Dashboard)"
+                    >
+                      ✕ Unpaid
+                    </button>
+                  </div>
                 </div>
               </div>
 

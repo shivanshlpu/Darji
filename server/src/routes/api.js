@@ -5,7 +5,7 @@ import { auditLog } from '../middleware/audit.js';
 import { login, getMe, updatePassword } from '../controllers/authController.js';
 import { getCustomers, getCustomerById, createCustomer, updateCustomer, deleteCustomer, bulkDeleteCustomers } from '../controllers/customerController.js';
 import { getCustomerMeasurements, createMeasurementVersion } from '../controllers/measurementController.js';
-import { getOrders, createOrder, updateOrder, deleteOrder, markOrderAsPaid, updateOrderStatus, addOrderPayment, updateOrderPayment, deleteOrderPayment, migrateExistingOrderPayments } from '../controllers/orderController.js';
+import { getOrders, createOrder, updateOrder, deleteOrder, markOrderAsPaid, markOrderAsUnpaid, updateOrderStatus, addOrderPayment, updateOrderPayment, deleteOrderPayment, migrateExistingOrderPayments } from '../controllers/orderController.js';
 import { addPayment } from '../controllers/paymentController.js';
 import { createInvoice } from '../controllers/invoiceController.js';
 import { getExpenses, createExpense, deleteExpense } from '../controllers/expenseController.js';
@@ -45,6 +45,7 @@ router.post('/orders/migrate-payments', protect, auditLog('Order', 'MIGRATE_PAYM
 router.put('/orders/:id', protect, auditLog('Order', 'UPDATE'), updateOrder);
 router.delete('/orders/:id', protect, auditLog('Order', 'DELETE'), deleteOrder);
 router.post('/orders/:id/mark-paid', protect, auditLog('Order', 'MARK_PAID'), markOrderAsPaid);
+router.post('/orders/:id/mark-unpaid', protect, auditLog('Order', 'MARK_UNPAID'), markOrderAsUnpaid);
 router.patch('/orders/:id/status', protect, auditLog('Order', 'STATUS_TRANSITION'), updateOrderStatus);
 
 // Payments on Orders

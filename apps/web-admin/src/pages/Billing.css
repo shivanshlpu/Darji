@@ -243,6 +243,30 @@
   background: #1EBE5D;
 }
 
+.billing__action-btn--unpaid {
+  background: #fff7ed;
+  color: #c2410c;
+  border-color: #fdba74;
+}
+
+.billing__action-btn--unpaid:hover {
+  background: #ffedd5;
+  color: #9a3412;
+  border-color: #fb923c;
+}
+
+.billing__action-btn--paid {
+  background: #f0fdf4;
+  color: #166534;
+  border-color: #86efac;
+}
+
+.billing__action-btn--paid:hover {
+  background: #dcfce7;
+  color: #14532d;
+  border-color: #4ade80;
+}
+
 /* Modifiers */
 .billing__modifiers {
   display: grid;

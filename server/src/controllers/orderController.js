@@ -437,6 +437,31 @@ export const markOrderAsPaid = async (req, res) => {
   }
 };
 
+export const markOrderAsUnpaid = async (req, res) => {
+  try {
+    const order = await findOrderByIdOrNumber(req.params.id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    const grandTotal = order.grandTotal || order.totalAmount || Math.max(0, (order.subtotal || 0) - (order.discount || 0) + (order.extraCharges || 0));
+
+    order.payments = [];
+    order.paidAmount = 0;
+    order.advancePaid = 0;
+    order.balanceDue = grandTotal;
+    order.pendingAmount = grandTotal;
+    order.paymentStatus = 'unpaid';
+    order.lastPaymentDate = null;
+    order.syncVersion = (order.syncVersion || 0) + 1;
+
+    await order.save();
+
+    res.json({ success: true, data: order });
+  } catch (err) {
+    console.error('[Mark Unpaid Error]:', err);
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
 export const addOrderPayment = async (req, res) => {
   try {
     const order = await findOrderByIdOrNumber(req.params.id);

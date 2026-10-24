@@ -385,6 +385,76 @@ const useAppStore = create((set, get) => ({
     }
   },
 
+  markOrderUnpaid: async (orderId) => {
+    const targetId = typeof orderId === 'object' ? (orderId._id || orderId.orderNumber) : orderId;
+
+    // 1. Optimistic UI & Local Cache Update
+    set((state) => {
+      const updatedOrders = state.orders.map((o) => {
+        if (o._id === targetId || o.orderNumber === targetId || o._id === orderId) {
+          const grandTotal = Number(o.grandTotal || o.totalAmount || o.subtotal || 0);
+          return {
+            ...o,
+            payments: [],
+            advancePaid: 0,
+            paidAmount: 0,
+            balanceDue: grandTotal,
+            pendingAmount: grandTotal,
+            paymentStatus: 'unpaid',
+            lastPaymentDate: null,
+          };
+        }
+        return o;
+      });
+
+      saveCachedData(CACHE_KEYS.ORDERS, updatedOrders);
+      return {
+        orders: updatedOrders,
+        dashboardData: generateDashboardData(updatedOrders, state.expenses),
+      };
+    });
+
+    // 2. MongoDB Atlas Sync
+    try {
+      const res = await api.markOrderAsUnpaid(targetId);
+      if (res && res.success && res.data) {
+        set((state) => {
+          const syncedOrders = state.orders.map(o => (o._id === res.data._id || o.orderNumber === res.data.orderNumber) ? res.data : o);
+          saveCachedData(CACHE_KEYS.ORDERS, syncedOrders);
+          return {
+            orders: syncedOrders,
+            dashboardData: generateDashboardData(syncedOrders, state.expenses),
+          };
+        });
+      }
+      useCustomerStore.getState().fetchCustomersFromDB();
+    } catch (err) {
+      console.warn('[markOrderUnpaid DB Sync Warning]:', err.message);
+      // Fallback via updateOrder
+      try {
+        const fallbackRes = await api.updateOrder(targetId, {
+          paidAmount: 0,
+          advancePaid: 0,
+          payments: [],
+          paymentStatus: 'unpaid',
+        });
+        if (fallbackRes && fallbackRes.success && fallbackRes.data) {
+          set((state) => {
+            const syncedOrders = state.orders.map(o => (o._id === fallbackRes.data._id || o.orderNumber === fallbackRes.data.orderNumber) ? fallbackRes.data : o);
+            saveCachedData(CACHE_KEYS.ORDERS, syncedOrders);
+            return {
+              orders: syncedOrders,
+              dashboardData: generateDashboardData(syncedOrders, state.expenses),
+            };
+          });
+        }
+        useCustomerStore.getState().fetchCustomersFromDB();
+      } catch (fErr) {
+        console.error('[markOrderUnpaid Fallback Error]:', fErr.message);
+      }
+    }
+  },
+
   addOrderPayment: async (orderId, paymentData) => {
     try {
       const res = await api.addPayment(orderId, paymentData);
