@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://darji.onrender.com/api/v1';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://darji-0iam.onrender.com/api/v1';
 
 async function request(endpoint, options = {}) {
   const userStr = localStorage.getItem('darji_user');
